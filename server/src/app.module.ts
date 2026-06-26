@@ -1,5 +1,6 @@
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AuthModule } from './auth/auth.module.js';
 import { BrandsModule } from './brands/brands.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ConfigModule } from '@nestjs/config';
@@ -16,6 +17,7 @@ import { ProductsModule } from './products/products.module.js';
     CategoriesModule,
     PrismaModule,
     ProductsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
