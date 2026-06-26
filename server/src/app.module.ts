@@ -5,6 +5,7 @@ import { CategoriesModule } from './categories/categories.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { ProductsModule } from './products/products.module.js';
 
 @Module({
   controllers: [AppController],
@@ -14,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     BrandsModule,
     CategoriesModule,
     PrismaModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
