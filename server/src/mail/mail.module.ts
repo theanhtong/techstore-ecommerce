@@ -14,7 +14,6 @@ import { ResendMailProvider } from './providers/resend.provider.js';
       provide: MAIL_PROVIDER,
       useFactory: (config: ConfigService) => {
         const provider = config.get<string>('MAIL_PROVIDER');
-        console.log('MAIL_PROVIDER:', provider);
         switch (provider) {
           case 'resend':
             return new ResendMailProvider();
