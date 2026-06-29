@@ -78,7 +78,7 @@ export class GhnSandboxProvider implements IShippingProvider {
 
   async calculateFee(input: CalculateFeeInput): Promise<number> {
     const res = await fetch(`${this.apiUrl}/v2/shipping-order/fee`, {
-      method: 'GET',
+      method: 'POST',
       headers: this.headers,
       body: JSON.stringify({
         service_type_id: Number(process.env.GHN_SERVICE_TYPE_ID) || 2,

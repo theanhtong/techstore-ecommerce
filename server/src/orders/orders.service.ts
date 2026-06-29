@@ -1,18 +1,11 @@
 import {
   BadRequestException,
   ForbiddenException,
-  forwardRef,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Coupon,
-  CouponUsage,
-  OrderStatus,
-  Prisma,
-} from '../generated/prisma/client.js';
-
+import { OrderStatus, Prisma } from '../generated/prisma/client.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -26,13 +19,13 @@ import {
   SHIPPING_PROVIDER,
   type IShippingProvider,
 } from '../shipments/interfaces/shipping-provider.interface.js';
-
-type CouponWithUsages = Coupon & { usages: CouponUsage[] };
+import { CouponsService } from '../coupons/coupons.service.js';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly couponsService: CouponsService,
     @Inject(SHIPPING_PROVIDER)
     private readonly shippingProvider: IShippingProvider,
   ) {}
@@ -85,42 +78,17 @@ export class OrdersService {
       );
     }, 0);
 
-    let coupon: CouponWithUsages | null = null;
+    let couponId: string | null = null;
     let discountAmount = 0;
 
     if (dto.couponCode) {
-      coupon = await this.prisma.coupon.findUnique({
-        where: { code: dto.couponCode },
-        include: { usages: { where: { userId } } },
-      });
-
-      if (!coupon) throw new BadRequestException('Coupon not found');
-      if (!coupon.isActive) throw new BadRequestException('Coupon is inactive');
-      if (coupon.expiresAt && coupon.expiresAt < new Date()) {
-        throw new BadRequestException('Coupon has expired');
-      }
-      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-        throw new BadRequestException('Coupon usage limit reached');
-      }
-      if (coupon.perUserLimit && coupon.usages.length >= coupon.perUserLimit) {
-        throw new BadRequestException(
-          'You have reached the usage limit for this coupon',
-        );
-      }
-      if (coupon.minOrderValue && subtotal < toNumber(coupon.minOrderValue)) {
-        throw new BadRequestException(
-          `Minimum order value is ${toNumber(coupon.minOrderValue).toLocaleString()}đ`,
-        );
-      }
-
-      discountAmount =
-        coupon.discountType === 'PERCENTAGE'
-          ? (subtotal * toNumber(coupon.discountValue)) / 100
-          : toNumber(coupon.discountValue);
-
-      if (coupon.maxDiscount) {
-        discountAmount = Math.min(discountAmount, toNumber(coupon.maxDiscount));
-      }
+      const result = await this.couponsService.applyToOrder(
+        userId,
+        dto.couponCode,
+        subtotal,
+      );
+      couponId = result.coupon.id;
+      discountAmount = result.discountAmount;
     }
 
     const totalWeight = cartItems.reduce(
@@ -154,10 +122,10 @@ export class OrdersService {
       async (tx) => {
         const variantIds = cartItems.map((i) => i.variantId);
         await tx.$executeRaw`
-        SELECT id FROM inventories
-        WHERE "variantId" = ANY(${variantIds}::uuid[])
-        FOR UPDATE
-      `;
+          SELECT id FROM inventories
+          WHERE "variantId" = ANY(${variantIds}::uuid[])
+          FOR UPDATE
+        `;
 
         const inventories = await tx.inventory.findMany({
           where: { variantId: { in: variantIds } },
@@ -180,7 +148,7 @@ export class OrdersService {
             orderNumber: generateOrderNumber(),
             userId,
             addressId: dto.addressId,
-            couponId: coupon?.id,
+            couponId,
             subtotal,
             discountAmount,
             shippingFee,
@@ -222,15 +190,15 @@ export class OrdersService {
           });
         }
 
-        if (coupon) {
+        if (couponId) {
           await tx.coupon.update({
-            where: { id: coupon.id },
+            where: { id: couponId },
             data: { usedCount: { increment: 1 } },
           });
           await tx.couponUsage.create({
             data: {
               id: uuidv7(),
-              couponId: coupon.id,
+              couponId,
               userId,
               orderId,
             },
@@ -259,11 +227,7 @@ export class OrdersService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        include: {
-          items: true,
-          payment: true,
-          shipment: true,
-        },
+        include: { items: true, payment: true, shipment: true },
       }),
       this.prisma.order.count({ where }),
     ]);
@@ -304,7 +268,6 @@ export class OrdersService {
 
     return this.prisma.$transaction(
       async (tx) => {
-        // release inventory
         for (const item of order.items) {
           if (item.variantId) {
             await tx.inventory.update({
@@ -314,7 +277,6 @@ export class OrdersService {
           }
         }
 
-        // rollback coupon
         if (order.couponId) {
           await tx.coupon.update({
             where: { id: order.couponId },

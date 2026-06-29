@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 
 import { CartModule } from '../cart/cart.module.js';
+import { CouponsModule } from '../coupons/coupons.module.js';
 import { GhnMockProvider } from '../shipments/providers/ghn/ghn-mock.provider.js';
 import { GhnProvider } from '../shipments/providers/ghn/ghn.provider.js';
 import { GhnSandboxProvider } from '../shipments/providers/ghn/ghn-sandbox.provider.js';
@@ -26,6 +27,7 @@ const shippingFeeProviderFactory = () => {
   imports: [
     InventoryModule,
     CartModule,
+    CouponsModule,
     forwardRef(() => PaymentsModule),
     forwardRef(() => ShipmentsModule),
   ],

@@ -6,6 +6,7 @@ import { BrandsModule } from './brands/brands.module.js';
 import { CartModule } from './cart/cart.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ConfigModule } from '@nestjs/config';
+import { CouponsModule } from './coupons/coupons.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { Module } from '@nestjs/common';
 import { OrdersModule } from './orders/orders.module.js';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module.js';
     PaymentsModule,
     ShipmentsModule,
     AddressModule,
+    CouponsModule,
   ],
 })
 export class AppModule {}
