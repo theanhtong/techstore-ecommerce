@@ -63,9 +63,10 @@ export class WishlistsService {
 
     const existing = await this.prisma.wishlist.findUnique({
       where: {
-        userId_productId: {
+        userId_productId_variantId: {
           userId,
           productId: product.id,
+          variantId: variant.id,
         },
       },
     });
@@ -100,9 +101,10 @@ export class WishlistsService {
   async check(userId: string, dto: CheckWishlistDto) {
     const wishlist = await this.prisma.wishlist.findUnique({
       where: {
-        userId_productId: {
+        userId_productId_variantId: {
           userId,
           productId: dto.productId,
+          variantId: dto.variantId,
         },
       },
     });
