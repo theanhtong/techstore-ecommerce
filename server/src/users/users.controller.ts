@@ -7,6 +7,7 @@ import {
   Patch,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -14,7 +15,9 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { UsersService } from './users.service.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto.js';
-import { Role } from '../generated/prisma/enums.js';
+import { AuditAction, Role } from '../generated/prisma/enums.js';
+import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
+import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
@@ -33,6 +36,8 @@ export class UsersController {
   }
 
   @Patch(':id/status')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'USER', action: AuditAction.UPDATE })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserStatusDto,

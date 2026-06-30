@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
@@ -18,7 +19,9 @@ import { UpdateInventoryDto } from '../inventories/dto/update-inventory.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
-import { Role } from '../generated/prisma/enums.js';
+import { AuditAction, Role } from '../generated/prisma/enums.js';
+import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
+import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.STAFF)
@@ -27,11 +30,15 @@ export class ProductsAdminController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT', action: AuditAction.CREATE })
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
   @Patch(':id')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT', action: AuditAction.UPDATE })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProductDto,
@@ -40,11 +47,15 @@ export class ProductsAdminController {
   }
 
   @Delete(':id')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT', action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
 
   @Post(':id/variants')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT_VARIANT', action: AuditAction.CREATE })
   createVariant(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateVariantDto,
@@ -53,6 +64,8 @@ export class ProductsAdminController {
   }
 
   @Patch(':id/variants/:vid')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT_VARIANT', action: AuditAction.UPDATE })
   updateVariant(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,
@@ -62,6 +75,8 @@ export class ProductsAdminController {
   }
 
   @Delete(':id/variants/:vid')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT_VARIANT', action: AuditAction.DELETE })
   removeVariant(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,
@@ -70,6 +85,8 @@ export class ProductsAdminController {
   }
 
   @Post(':id/variants/:vid/images')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT_IMAGE', action: AuditAction.CREATE })
   createImage(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,
@@ -79,6 +96,8 @@ export class ProductsAdminController {
   }
 
   @Delete(':id/variants/:vid/images/:iid')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PRODUCT_IMAGE', action: AuditAction.DELETE })
   removeImage(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,
@@ -88,6 +107,8 @@ export class ProductsAdminController {
   }
 
   @Patch(':id/variants/:vid/inventory')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'INVENTORY', action: AuditAction.UPDATE })
   updateInventory(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,

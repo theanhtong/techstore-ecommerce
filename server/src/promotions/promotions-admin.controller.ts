@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PromotionsService } from './promotions.service.js';
 import { CreatePromotionDto } from './dto/create-promotion.dto.js';
@@ -18,7 +19,9 @@ import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
-import { Role } from '../generated/prisma/enums.js';
+import { AuditAction, Role } from '../generated/prisma/enums.js';
+import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
+import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
@@ -27,6 +30,8 @@ export class PromotionsAdminController {
   constructor(private readonly promotionsService: PromotionsService) {}
 
   @Post()
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION', action: AuditAction.CREATE })
   create(@Body() dto: CreatePromotionDto) {
     return this.promotionsService.create(dto);
   }
@@ -42,6 +47,8 @@ export class PromotionsAdminController {
   }
 
   @Patch(':id')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION', action: AuditAction.UPDATE })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePromotionDto,
@@ -50,11 +57,15 @@ export class PromotionsAdminController {
   }
 
   @Delete(':id')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION', action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.promotionsService.remove(id);
   }
 
   @Post(':id/products')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION_PRODUCT', action: AuditAction.CREATE })
   addProduct(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddPromotionProductDto,
@@ -63,6 +74,8 @@ export class PromotionsAdminController {
   }
 
   @Delete(':id/products/:productId')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION_PRODUCT', action: AuditAction.DELETE })
   removeProduct(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('productId', ParseUUIDPipe) productId: string,

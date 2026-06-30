@@ -1,6 +1,7 @@
 import { AddressModule } from './address/address.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AuditLogModule } from './audit-log/audit-log.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BrandsModule } from './brands/brands.module.js';
 import { CartModule } from './cart/cart.module.js';
@@ -42,6 +43,7 @@ import { WishlistsModule } from './wishlists/wishlists.module.js';
     WishlistsModule,
     PromotionsModule,
     NotificationsModule,
+    AuditLogModule,
   ],
 })
 export class AppModule {}
