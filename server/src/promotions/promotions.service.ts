@@ -59,6 +59,18 @@ export class PromotionsService {
             variant: { select: { id: true, sku: true, price: true } },
           },
         },
+        coupons: {
+          select: {
+            id: true,
+            code: true,
+            discountType: true,
+            discountValue: true,
+            usageLimit: true,
+            usedCount: true,
+            expiresAt: true,
+            isActive: true,
+          },
+        },
       },
     });
     if (!promotion) throw new NotFoundException(`Promotion #${id} not found`);

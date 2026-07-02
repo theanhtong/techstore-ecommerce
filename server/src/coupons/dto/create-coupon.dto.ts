@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -16,6 +17,10 @@ export class CreateCouponDto {
   @IsString()
   @MaxLength(50)
   code!: string;
+
+  @IsOptional()
+  @IsUUID()
+  promotionId?: string;
 
   @IsEnum(DiscountType)
   discountType!: DiscountType;

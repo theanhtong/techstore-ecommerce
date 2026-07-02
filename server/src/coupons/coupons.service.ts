@@ -25,6 +25,14 @@ export class CouponsService {
     if (existing)
       throw new ConflictException(`Coupon code "${dto.code}" already exists`);
 
+    if (dto.promotionId) {
+      const promotion = await this.prisma.promotion.findUnique({
+        where: { id: dto.promotionId },
+      });
+      if (!promotion)
+        throw new NotFoundException(`Promotion #${dto.promotionId} not found`);
+    }
+
     return this.prisma.coupon.create({
       data: {
         id: uuidv7(),

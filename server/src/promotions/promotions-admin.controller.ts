@@ -22,12 +22,17 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { AuditAction, Role } from '../generated/prisma/enums.js';
 import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
 import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
+import { CreateCouponDto } from '../coupons/dto/create-coupon.dto.js';
+import { CouponsService } from '../coupons/coupons.service.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 @Controller('admin/promotions')
 export class PromotionsAdminController {
-  constructor(private readonly promotionsService: PromotionsService) {}
+  constructor(
+    private readonly promotionsService: PromotionsService,
+    private readonly couponsService: CouponsService,
+  ) {}
 
   @Post()
   @UseInterceptors(AuditLogInterceptor)
@@ -44,6 +49,16 @@ export class PromotionsAdminController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.promotionsService.findOne(id);
+  }
+
+  @Post(':id/coupons')
+  @UseInterceptors(AuditLogInterceptor)
+  @Auditable({ entityType: 'PROMOTION_COUPON', action: AuditAction.CREATE })
+  createCoupon(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateCouponDto,
+  ) {
+    return this.couponsService.create({ ...dto, promotionId: id });
   }
 
   @Patch(':id')
