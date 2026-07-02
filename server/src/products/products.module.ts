@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common';
 import { ProductsAdminController } from './products-admin.controller.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsService } from './products.service.js';
+import { UploadModule } from '../upload/upload.module.js';
 
 @Module({
-  imports: [InventoryModule],
+  imports: [InventoryModule, UploadModule],
   controllers: [ProductsController, ProductsAdminController],
   providers: [ProductsService],
   exports: [ProductsService],

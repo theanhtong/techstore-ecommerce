@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { Product, ProductStatus } from '../generated/prisma/client.js';
 
-import { CreateImageDto } from '../images/dto/create-image.dto.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { CreateVariantDto } from '../variants/dto/create-variant.dto.js';
 import { InventoryService } from '../inventories/inventories.service.js';
@@ -15,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { UpdateInventoryDto } from '../inventories/dto/update-inventory.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { UpdateVariantDto } from '../variants/dto/update-variant.dto.js';
+import { UploadService } from '../upload/upload.service.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
 import { uuidv7 } from 'uuidv7';
 
@@ -23,6 +23,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async create(dto: CreateProductDto): Promise<Product> {
@@ -135,11 +136,29 @@ export class ProductsService {
     return this.prisma.productVariant.delete({ where: { id: variantId } });
   }
 
-  async createImage(productId: string, variantId: string, dto: CreateImageDto) {
+  async createImage(
+    productId: string,
+    variantId: string,
+    file: Express.Multer.File,
+    altText?: string,
+    order?: number,
+  ) {
     await this.findVariant(productId, variantId);
 
+    const uploaded = await this.uploadService.upload(
+      file,
+      'ecommerce/products',
+    );
+
     return this.prisma.productImage.create({
-      data: { id: uuidv7(), productId, variantId, ...dto },
+      data: {
+        id: uuidv7(),
+        productId,
+        variantId,
+        url: uploaded.url,
+        altText,
+        order: order ?? 0,
+      },
     });
   }
 
@@ -151,7 +170,21 @@ export class ProductsService {
     });
     if (!image) throw new NotFoundException(`Image #${imageId} not found`);
 
+    // xóa trên Cloudinary nếu có publicId
+    // URL format: https://res.cloudinary.com/<cloud>/image/upload/<publicId>.<ext>
+    const publicId = this.extractPublicId(image.url);
+    if (publicId) await this.uploadService.delete(publicId);
+
     return this.prisma.productImage.delete({ where: { id: imageId } });
+  }
+
+  private extractPublicId(url: string): string | null {
+    try {
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
   }
 
   async updateInventory(

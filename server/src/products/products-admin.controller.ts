@@ -2,10 +2,15 @@ import {
   Body,
   Controller,
   Delete,
+  FileTypeValidator,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,7 +19,6 @@ import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { CreateVariantDto } from '../variants/dto/create-variant.dto.js';
 import { UpdateVariantDto } from '../variants/dto/update-variant.dto.js';
-import { CreateImageDto } from '../images/dto/create-image.dto.js';
 import { UpdateInventoryDto } from '../inventories/dto/update-inventory.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -22,6 +26,8 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { AuditAction, Role } from '../generated/prisma/enums.js';
 import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
 import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.STAFF)
@@ -85,14 +91,23 @@ export class ProductsAdminController {
   }
 
   @Post(':id/variants/:vid/images')
-  @UseInterceptors(AuditLogInterceptor)
-  @Auditable({ entityType: 'PRODUCT_IMAGE', action: AuditAction.CREATE })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   createImage(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('vid', ParseUUIDPipe) vid: string,
-    @Body() dto: CreateImageDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Query('altText') altText?: string,
+    @Query('order') order?: number,
   ) {
-    return this.productsService.createImage(id, vid, dto);
+    return this.productsService.createImage(id, vid, file, altText, order);
   }
 
   @Delete(':id/variants/:vid/images/:iid')
