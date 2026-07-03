@@ -1,0 +1,23 @@
+{
+  "name": "nestjs-ecommerce",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run start:dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theanhtong/ecommerce.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/theanhtong/ecommerce/issues"
+  },
+  "homepage": "https://github.com/theanhtong/ecommerce#readme",
+  "description": ""
+}
