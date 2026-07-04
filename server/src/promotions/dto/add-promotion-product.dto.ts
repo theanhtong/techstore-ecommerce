@@ -9,7 +9,11 @@ export class AddPromotionProductDto {
 
   @IsOptional()
   @IsUUID()
-  variantId?: string;
+  categoryId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  brandId?: string;
 
   @IsEnum(DiscountType)
   discountType!: DiscountType;

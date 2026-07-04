@@ -10,6 +10,7 @@ import { OrdersAdminController } from './orders-admin.controller.js';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
 import { PaymentsModule } from '../payments/payments.module.js';
+import { PromotionsModule } from '../promotions/promotions.module.js';
 import { SHIPPING_PROVIDER } from '../shipments/interfaces/shipping-provider.interface.js';
 import { ShipmentsModule } from '../shipments/shipments.module.js';
 
@@ -27,6 +28,7 @@ const shippingFeeProviderFactory = () => {
     InventoryModule,
     CartModule,
     CouponsModule,
+    PromotionsModule,
     NotificationsModule,
     forwardRef(() => PaymentsModule),
     forwardRef(() => ShipmentsModule),

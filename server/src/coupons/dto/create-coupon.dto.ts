@@ -20,7 +20,7 @@ export class CreateCouponDto {
 
   @IsOptional()
   @IsUUID()
-  promotionId?: string;
+  campaignId?: string;
 
   @IsEnum(DiscountType)
   discountType!: DiscountType;
@@ -48,7 +48,11 @@ export class CreateCouponDto {
 
   @IsOptional()
   @IsDateString()
-  expiresAt?: string;
+  startsAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endsAt?: string;
 
   @IsOptional()
   @IsBoolean()

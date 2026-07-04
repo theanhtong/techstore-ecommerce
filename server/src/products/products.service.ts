@@ -11,11 +11,13 @@ import { InventoryService } from '../inventories/inventories.service.js';
 import { Paginated } from '../common/interfaces/paginated.interface.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { PromotionsService } from '../promotions/promotions.service.js';
 import { UpdateInventoryDto } from '../inventories/dto/update-inventory.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { UpdateVariantDto } from '../variants/dto/update-variant.dto.js';
 import { UploadService } from '../upload/upload.service.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
+import { toNumber } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
 @Injectable()
@@ -24,6 +26,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
     private readonly uploadService: UploadService,
+    private readonly promotionsService: PromotionsService,
   ) {}
 
   async create(dto: CreateProductDto): Promise<Product> {
@@ -35,7 +38,7 @@ export class ProductsService {
     });
   }
 
-  async findAll(query: PaginationDto): Promise<Paginated<Product>> {
+  async findAll(query: PaginationDto): Promise<Paginated<any>> {
     const where = {
       ...(query.search && {
         OR: [
@@ -51,15 +54,42 @@ export class ProductsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        include: { category: true, brand: true, images: true },
+        include: {
+          category: true,
+          brand: true,
+          images: true,
+          variants: { select: { id: true, price: true } },
+        },
       }),
       this.prisma.product.count({ where }),
     ]);
 
-    return buildPaginated(data, total, query.page, query.limit);
+    const discountMap =
+      await this.promotionsService.resolveDiscountPercentForProducts(
+        data.map((p) => ({
+          id: p.id,
+          categoryId: p.categoryId,
+          brandId: p.brandId,
+        })),
+      );
+
+    const enriched = data.map((product) => {
+      const discountPercent = discountMap.get(product.id);
+      const variants = product.variants.map((v) => {
+        const price = toNumber(v.price);
+        const salePrice =
+          discountPercent !== undefined
+            ? Math.max(price - (price * discountPercent) / 100, 0)
+            : null;
+        return { ...v, price, salePrice };
+      });
+      return { ...product, variants };
+    });
+
+    return buildPaginated(enriched, total, query.page, query.limit);
   }
 
-  async findOne(id: string): Promise<Product> {
+  async findOne(id: string): Promise<any> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -75,7 +105,27 @@ export class ProductsService {
       },
     });
     if (!product) throw new NotFoundException(`Product #${id} not found`);
-    return product;
+
+    const discountMap =
+      await this.promotionsService.resolveDiscountPercentForProducts([
+        {
+          id: product.id,
+          categoryId: product.categoryId,
+          brandId: product.brandId,
+        },
+      ]);
+    const discountPercent = discountMap.get(product.id);
+
+    const variants = product.variants.map((v) => {
+      const price = toNumber(v.price);
+      const salePrice =
+        discountPercent !== undefined
+          ? Math.max(price - (price * discountPercent) / 100, 0)
+          : null;
+      return { ...v, price, salePrice };
+    });
+
+    return { ...product, variants };
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
@@ -132,7 +182,6 @@ export class ProductsService {
 
   async removeVariant(productId: string, variantId: string) {
     await this.findVariant(productId, variantId);
-
     return this.prisma.productVariant.delete({ where: { id: variantId } });
   }
 
@@ -170,8 +219,6 @@ export class ProductsService {
     });
     if (!image) throw new NotFoundException(`Image #${imageId} not found`);
 
-    // xóa trên Cloudinary nếu có publicId
-    // URL format: https://res.cloudinary.com/<cloud>/image/upload/<publicId>.<ext>
     const publicId = this.extractPublicId(image.url);
     if (publicId) await this.uploadService.delete(publicId);
 

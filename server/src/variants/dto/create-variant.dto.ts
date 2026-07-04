@@ -1,6 +1,5 @@
 import {
   IsBoolean,
-  IsDateString,
   IsDecimal,
   IsInt,
   IsObject,
@@ -20,18 +19,6 @@ export class CreateVariantDto {
 
   @IsOptional()
   @IsDecimal({ decimal_digits: '0,2' })
-  salePrice?: string;
-
-  @IsOptional()
-  @IsDateString()
-  saleStartsAt?: string;
-
-  @IsOptional()
-  @IsDateString()
-  saleEndsAt?: string;
-
-  @IsOptional()
-  @IsDecimal({ decimal_digits: '0,2' })
   weight?: string;
 
   @IsOptional()
@@ -42,7 +29,6 @@ export class CreateVariantDto {
   @IsString()
   connectivity?: string;
 
-  // Computer specs
   @IsOptional() @IsString() cpu?: string;
   @IsOptional() @IsString() ram?: string;
   @IsOptional() @IsString() storage?: string;
@@ -51,23 +37,19 @@ export class CreateVariantDto {
   @IsOptional() @IsString() os?: string;
   @IsOptional() @IsString() battery?: string;
 
-  // Keyboard specs
   @IsOptional() @IsString() switchType?: string;
   @IsOptional() @IsString() layout?: string;
   @IsOptional() @IsString() formFactor?: string;
 
-  // Mouse specs
   @IsOptional() @IsInt() @Min(0) dpi?: number;
   @IsOptional() @IsInt() @Min(0) buttons?: number;
   @IsOptional() @IsString() sensor?: string;
 
-  // Audio specs
   @IsOptional() @IsString() driverSize?: string;
   @IsOptional() @IsString() frequency?: string;
   @IsOptional() @IsBoolean() microphone?: boolean;
 
   @IsOptional()
   @IsObject()
-  // extras?: Prisma.JsonValue;
   extras?: any;
 }

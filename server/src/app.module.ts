@@ -4,6 +4,7 @@ import { AppService } from './app.service.js';
 import { AuditLogModule } from './audit-log/audit-log.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BrandsModule } from './brands/brands.module.js';
+import { CampaignsModule } from './campaigns/campaigns.module.js';
 import { CartModule } from './cart/cart.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ConfigModule } from '@nestjs/config';
@@ -44,6 +45,7 @@ import { WishlistsModule } from './wishlists/wishlists.module.js';
     PromotionsModule,
     NotificationsModule,
     AuditLogModule,
+    CampaignsModule,
   ],
 })
 export class AppModule {}

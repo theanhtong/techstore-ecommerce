@@ -1,15 +1,13 @@
 import {
   IsBoolean,
   IsDateString,
-  IsEnum,
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
-
-import { PromotionType } from '../../generated/prisma/enums.js';
 
 export class CreatePromotionDto {
   @IsString()
@@ -20,18 +18,14 @@ export class CreatePromotionDto {
   @IsString()
   description?: string;
 
-  @IsEnum(PromotionType)
-  type!: PromotionType;
+  @IsOptional()
+  @IsUUID()
+  campaignId?: string;
 
   @IsOptional()
   @IsInt()
-  @Min(1)
-  usageLimit?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  perUserLimit?: number;
+  @Min(0)
+  priority?: number = 0;
 
   @IsOptional()
   @IsDateString()

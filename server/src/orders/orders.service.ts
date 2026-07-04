@@ -22,12 +22,14 @@ import {
   type IShippingProvider,
 } from '../shipments/interfaces/shipping-provider.interface.js';
 import { CouponsService } from '../coupons/coupons.service.js';
+import { PromotionsService } from '../promotions/promotions.service.js';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly couponsService: CouponsService,
+    private readonly promotionsService: PromotionsService,
     private readonly notificationsService: NotificationsService,
     @Inject(SHIPPING_PROVIDER)
     private readonly shippingProvider: IShippingProvider,
@@ -49,7 +51,15 @@ export class OrdersService {
       include: {
         variant: {
           include: {
-            product: { select: { name: true, slug: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                categoryId: true,
+                brandId: true,
+              },
+            },
             images: { orderBy: { order: 'asc' }, take: 1 },
             inventory: true,
           },
@@ -74,12 +84,29 @@ export class OrdersService {
       }
     }
 
-    const subtotal = cartItems.reduce((sum, item) => {
-      return (
-        sum +
-        toNumber(item.variant.salePrice ?? item.variant.price) * item.quantity
+    const discountMap =
+      await this.promotionsService.resolveDiscountPercentForProducts(
+        cartItems.map((i) => ({
+          id: i.variant.product.id,
+          categoryId: i.variant.product.categoryId,
+          brandId: i.variant.product.brandId,
+        })),
       );
-    }, 0);
+
+    const pricedItems = cartItems.map((item) => {
+      const price = toNumber(item.variant.price);
+      const discountPercent = discountMap.get(item.variant.product.id);
+      const unitPrice =
+        discountPercent !== undefined
+          ? Math.max(price - (price * discountPercent) / 100, 0)
+          : price;
+      return { ...item, resolvedPrice: price, resolvedUnitPrice: unitPrice };
+    });
+
+    const subtotal = pricedItems.reduce(
+      (sum, item) => sum + item.resolvedUnitPrice * item.quantity,
+      0,
+    );
 
     let couponId: string | null = null;
     let discountAmount = 0;
@@ -94,7 +121,7 @@ export class OrdersService {
       discountAmount = result.discountAmount;
     }
 
-    const totalWeight = cartItems.reduce(
+    const totalWeight = pricedItems.reduce(
       (sum) => sum + (Number(process.env.GHN_DEFAULT_ITEM_WEIGHT) || 500),
       0,
     );
@@ -123,7 +150,7 @@ export class OrdersService {
 
     return this.prisma.$transaction(
       async (tx) => {
-        const variantIds = cartItems.map((i) => i.variantId);
+        const variantIds = pricedItems.map((i) => i.variantId);
         await tx.$executeRaw`
           SELECT id FROM inventories
           WHERE "variantId" = ANY(${variantIds}::uuid[])
@@ -134,7 +161,7 @@ export class OrdersService {
           where: { variantId: { in: variantIds } },
         });
 
-        for (const item of cartItems) {
+        for (const item of pricedItems) {
           const inv = inventories.find((i) => i.variantId === item.variantId);
           const available = (inv?.quantity ?? 0) - (inv?.reservedQuantity ?? 0);
           if (available < item.quantity) {
@@ -159,22 +186,19 @@ export class OrdersService {
             shippingSnapshot,
             notes: dto.notes,
             items: {
-              create: cartItems.map((item) => ({
+              create: pricedItems.map((item) => ({
                 id: uuidv7(),
                 variantId: item.variantId,
                 quantity: item.quantity,
-                unitPrice: toNumber(
-                  item.variant.salePrice ?? item.variant.price,
-                ),
-                total:
-                  toNumber(item.variant.salePrice ?? item.variant.price) *
-                  item.quantity,
+                unitPrice: item.resolvedUnitPrice,
+                total: item.resolvedUnitPrice * item.quantity,
                 variantSnapshot: {
                   sku: item.variant.sku,
-                  price: toNumber(item.variant.price),
-                  salePrice: item.variant.salePrice
-                    ? toNumber(item.variant.salePrice)
-                    : null,
+                  price: item.resolvedPrice,
+                  salePrice:
+                    item.resolvedUnitPrice !== item.resolvedPrice
+                      ? item.resolvedUnitPrice
+                      : null,
                   color: item.variant.color,
                   productName: item.variant.product.name,
                   productSlug: item.variant.product.slug,
@@ -186,7 +210,7 @@ export class OrdersService {
           include: { items: true },
         });
 
-        for (const item of cartItems) {
+        for (const item of pricedItems) {
           await tx.inventory.update({
             where: { variantId: item.variantId },
             data: { reservedQuantity: { increment: item.quantity } },
@@ -199,12 +223,7 @@ export class OrdersService {
             data: { usedCount: { increment: 1 } },
           });
           await tx.couponUsage.create({
-            data: {
-              id: uuidv7(),
-              couponId,
-              userId,
-              orderId,
-            },
+            data: { id: uuidv7(), couponId, userId, orderId },
           });
         }
 

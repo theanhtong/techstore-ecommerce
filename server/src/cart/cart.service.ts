@@ -3,16 +3,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { calcSubtotal, toNumber } from '../common/helpers/price.hepler.js';
 
 import { AddCartItemDto } from './dto/add-cart-item.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { PromotionsService } from '../promotions/promotions.service.js';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto.js';
-import { calcSubtotal } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class CartService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly promotionsService: PromotionsService,
+  ) {}
 
   async getCart(userId: string) {
     const cart = await this.prisma.cart.findUnique({
@@ -23,7 +27,14 @@ export class CartService {
             variant: {
               include: {
                 product: {
-                  select: { id: true, name: true, slug: true, status: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    status: true,
+                    categoryId: true,
+                    brandId: true,
+                  },
                 },
                 images: { orderBy: { order: 'asc' }, take: 1 },
                 inventory: {
@@ -39,14 +50,46 @@ export class CartService {
 
     if (!cart) return { items: [], subtotal: 0 };
 
+    const productsInput = cart.items.map((item) => item.variant.product);
+    const discountMap =
+      await this.promotionsService.resolveDiscountPercentForProducts(
+        productsInput,
+      );
+
+    const itemsWithEffectivePrice = cart.items.map((item) => {
+      const originalPrice = toNumber(item.variant.price);
+      const discountPercent = discountMap.get(item.variant.product.id);
+
+      const salePrice = this.promotionsService.calculateSalePrice(
+        originalPrice,
+        discountPercent,
+      );
+
+      const effectivePrice = salePrice !== null ? salePrice : originalPrice;
+
+      return {
+        ...item,
+        variant: {
+          ...item.variant,
+          price: originalPrice,
+          salePrice,
+        },
+        effectivePrice,
+      };
+    });
+
     const subtotal = calcSubtotal(
-      cart.items.map((item) => ({
-        price: item.variant.salePrice ?? item.variant.price,
+      itemsWithEffectivePrice.map((item) => ({
+        price: item.effectivePrice,
         quantity: item.quantity,
       })),
     );
 
-    return { ...cart, subtotal };
+    return {
+      ...cart,
+      items: itemsWithEffectivePrice,
+      subtotal,
+    };
   }
 
   async addItem(userId: string, dto: AddCartItemDto) {

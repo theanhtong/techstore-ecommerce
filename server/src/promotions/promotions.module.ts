@@ -1,10 +1,10 @@
-import { CouponsModule } from '../coupons/coupons.module.js';
+import { CampaignsModule } from '../campaigns/campaigns.module.js';
 import { Module } from '@nestjs/common';
 import { PromotionsAdminController } from './promotions-admin.controller.js';
 import { PromotionsService } from './promotions.service.js';
 
 @Module({
-  imports: [CouponsModule],
+  imports: [CampaignsModule],
   controllers: [PromotionsAdminController],
   providers: [PromotionsService],
   exports: [PromotionsService],

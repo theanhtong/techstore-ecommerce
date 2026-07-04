@@ -22,19 +22,14 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 import { AuditAction, Role } from '../generated/prisma/enums.js';
 import { AuditLogInterceptor } from '../audit-log/interceptors/audit-log.interceptor.js';
 import { Auditable } from '../audit-log/decorators/auditable.decorator.js';
-import { CreateCouponDto } from '../coupons/dto/create-coupon.dto.js';
-import { CouponsService } from '../coupons/coupons.service.js';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.STAFF)
 @Controller('admin/promotions')
 export class PromotionsAdminController {
-  constructor(
-    private readonly promotionsService: PromotionsService,
-    private readonly couponsService: CouponsService,
-  ) {}
+  constructor(private readonly promotionsService: PromotionsService) {}
 
   @Post()
   @UseInterceptors(AuditLogInterceptor)
@@ -51,16 +46,6 @@ export class PromotionsAdminController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.promotionsService.findOne(id);
-  }
-
-  @Post(':id/coupons')
-  @UseInterceptors(AuditLogInterceptor)
-  @Auditable({ entityType: 'PROMOTION_COUPON', action: AuditAction.CREATE })
-  createCoupon(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: CreateCouponDto,
-  ) {
-    return this.couponsService.create({ ...dto, promotionId: id });
   }
 
   @Patch(':id')
@@ -90,13 +75,13 @@ export class PromotionsAdminController {
     return this.promotionsService.addProduct(id, dto);
   }
 
-  @Delete(':id/products/:productId')
+  @Delete(':id/products/:promotionProductId')
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PROMOTION_PRODUCT', action: AuditAction.DELETE })
   removeProduct(
     @Param('id', ParseUUIDPipe) id: string,
-    @Param('productId', ParseUUIDPipe) productId: string,
+    @Param('promotionProductId', ParseUUIDPipe) promotionProductId: string,
   ) {
-    return this.promotionsService.removeProduct(id, productId);
+    return this.promotionsService.removeProduct(id, promotionProductId);
   }
 }
