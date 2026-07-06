@@ -35,6 +35,7 @@ jest.unstable_mockModule('../common/helpers/pagination.helper.js', () => ({
 const { OrdersService } = await import('./orders.service.js');
 const { PrismaService } = await import('../prisma/prisma.service.js');
 const { CouponsService } = await import('../coupons/coupons.service.js');
+const { PromotionsService } = await import('../promotions/promotions.service.js');
 const { NotificationsService } =
   await import('../notifications/notifications.service.js');
 const { SHIPPING_PROVIDER } =
@@ -61,6 +62,7 @@ describe('OrdersService', () => {
     coupon: { update: jest.fn() },
     couponUsage: { create: jest.fn(), deleteMany: jest.fn() },
     $executeRaw: jest.fn(),
+    $queryRaw: jest.fn(() => Promise.resolve([{ id: 'coupon-123' }])),
     $transaction: jest.fn((cbOrArray: any) => {
       if (typeof cbOrArray === 'function') {
         return cbOrArray(mockPrismaService);
@@ -70,6 +72,9 @@ describe('OrdersService', () => {
   };
 
   const mockCouponsService: Record<string, any> = { applyToOrder: jest.fn() };
+  const mockPromotionsService: Record<string, any> = {
+    resolveDiscountPercentForProducts: jest.fn(() => new Map()),
+  };
   const mockNotificationsService: Record<string, any> = { create: jest.fn() };
   const mockShippingProvider: Record<string, any> = { calculateFee: jest.fn() };
 
@@ -79,6 +84,7 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: CouponsService, useValue: mockCouponsService },
+        { provide: PromotionsService, useValue: mockPromotionsService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: SHIPPING_PROVIDER, useValue: mockShippingProvider },
       ],
@@ -161,6 +167,7 @@ describe('OrdersService', () => {
         'user-122',
         'SALE10',
         100,
+        expect.any(Object),
       );
       expect(mockPrismaService.coupon.update).toHaveBeenCalledWith({
         where: { id: 'coupon-123' },

@@ -185,11 +185,11 @@ export class CartService {
   }
 
   private async assertCartItemOwner(userId: string, itemId: string) {
-    const cart = await this.prisma.cart.findUnique({ where: { userId } });
-    if (!cart) throw new NotFoundException('Cart not found');
-
     const item = await this.prisma.cartItem.findFirst({
-      where: { id: itemId, cartId: cart.id },
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
     });
     if (!item) throw new NotFoundException(`Cart item #${itemId} not found`);
 

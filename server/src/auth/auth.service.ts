@@ -15,7 +15,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { MailService } from '../mail/mail.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RegisterDto } from './dto/register.dto.js';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { uuidv7 } from 'uuidv7';
 
 @Injectable()
@@ -115,12 +115,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const session = await this.prisma.session.findFirst({
-      where: { userId: payload.sub },
+    if (!payload.jti) {
+      throw new UnauthorizedException('Invalid refresh token format');
+    }
+
+    const session = await this.prisma.session.findUnique({
+      where: { id: payload.jti },
     });
     if (!session) throw new UnauthorizedException('Session not found');
 
-    const valid = await bcrypt.compare(refreshToken, session.token);
+    const hash = createHash('sha256').update(refreshToken).digest('hex');
+    const valid = session.token === hash;
     if (!valid) throw new UnauthorizedException('Invalid refresh token');
 
     await this.prisma.session.delete({ where: { id: session.id } });
@@ -139,23 +144,25 @@ export class AuthService {
     ip?: string,
     userAgent?: string,
   ): Promise<AuthResponse> {
+    const sessionId = uuidv7();
     const payload: JwtPayload = { sub: userId, email, role };
+    const rtPayload: JwtPayload = { ...payload, jti: sessionId };
 
     const accessToken = this.jwt.sign(payload, {
       secret: process.env.JWT_SECRET,
       expiresIn: '15m',
     });
 
-    const refreshToken = this.jwt.sign(payload, {
+    const refreshToken = this.jwt.sign(rtPayload, {
       secret: process.env.JWT_REFRESH_SECRET,
       expiresIn: '7d',
     });
 
-    const hashedRt = await bcrypt.hash(refreshToken, 10);
+    const hashedRt = createHash('sha256').update(refreshToken).digest('hex');
 
     await this.prisma.session.create({
       data: {
-        id: uuidv7(),
+        id: sessionId,
         userId,
         token: hashedRt,
         ipAddress: ip,

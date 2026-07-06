@@ -38,6 +38,7 @@ describe('AuthService', () => {
     session: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
@@ -213,8 +214,8 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if session is not found', async () => {
-      mockJwtService.verify.mockReturnValue(mockPayload);
-      mockPrismaService.session.findFirst.mockResolvedValue(null);
+      mockJwtService.verify.mockReturnValue({ ...mockPayload, jti: 'sess-1' });
+      mockPrismaService.session.findUnique.mockResolvedValue(null);
 
       await expect(service.refresh(token)).rejects.toThrow(
         UnauthorizedException,
@@ -222,12 +223,11 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if token does not match hashed session token', async () => {
-      mockJwtService.verify.mockReturnValue(mockPayload);
-      mockPrismaService.session.findFirst.mockResolvedValue({
+      mockJwtService.verify.mockReturnValue({ ...mockPayload, jti: 'sess-1' });
+      mockPrismaService.session.findUnique.mockResolvedValue({
         id: 'sess-1',
         token: 'hashed-old-rt',
       });
-      mockCompare.mockResolvedValue(false);
 
       await expect(service.refresh(token)).rejects.toThrow(
         UnauthorizedException,
@@ -235,12 +235,14 @@ describe('AuthService', () => {
     });
 
     it('should delete old session and generate new tokens upon successful refresh', async () => {
-      mockJwtService.verify.mockReturnValue(mockPayload);
-      mockPrismaService.session.findFirst.mockResolvedValue({
+      const { createHash } = await import('crypto');
+      const hash = createHash('sha256').update(token).digest('hex');
+
+      mockJwtService.verify.mockReturnValue({ ...mockPayload, jti: 'sess-1' });
+      mockPrismaService.session.findUnique.mockResolvedValue({
         id: 'sess-1',
-        token: 'hashed-rt',
+        token: hash,
       });
-      mockCompare.mockResolvedValue(true);
       mockPrismaService.session.delete.mockResolvedValue({});
       mockJwtService.sign.mockReturnValue('new-mock-token');
       mockPrismaService.session.create.mockResolvedValue({});

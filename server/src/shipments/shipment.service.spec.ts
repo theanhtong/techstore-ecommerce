@@ -36,6 +36,7 @@ describe('ShipmentsService', () => {
   const mockPrismaService: Record<string, any> = {
     order: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     shipment: {
       findUnique: jest.fn(),
@@ -46,6 +47,27 @@ describe('ShipmentsService', () => {
     shipmentTracking: {
       create: jest.fn(),
     },
+    inventory: {
+      update: jest.fn(),
+    },
+    notification: {
+      create: jest.fn(),
+    },
+    coupon: {
+      update: jest.fn(),
+    },
+    couponUsage: {
+      deleteMany: jest.fn(),
+    },
+    payment: {
+      update: jest.fn(),
+    },
+    $transaction: jest.fn((cbOrArray: any) => {
+      if (typeof cbOrArray === 'function') {
+        return cbOrArray(mockPrismaService);
+      }
+      return Promise.all(cbOrArray);
+    }),
   };
 
   const mockOrdersService: Record<string, any> = {
@@ -168,7 +190,10 @@ describe('ShipmentsService', () => {
     const mockShipment = {
       id: 'ship-1',
       orderId: 'order-1',
-      order: { userId: 'user-1' },
+      order: {
+        userId: 'user-1',
+        items: [],
+      },
     };
 
     it('should throw NotFoundException if shipment record is missing', async () => {
@@ -183,13 +208,23 @@ describe('ShipmentsService', () => {
     });
 
     it('should seamlessly execute cascades for order completions and update payment vectors if status matches DELIVERED', async () => {
-      mockPrismaService.shipment.findUnique.mockResolvedValue(mockShipment);
+      const shipmentWithPayment = {
+        ...mockShipment,
+        order: {
+          ...mockShipment.order,
+          payment: {
+            method: PaymentMethod.COD,
+            status: 'PENDING',
+          },
+        },
+      };
+      mockPrismaService.shipment.findUnique.mockResolvedValue(shipmentWithPayment);
       mockPrismaService.shipmentTracking.create.mockResolvedValue({
         id: 'track-node',
       });
       mockPrismaService.shipment.update.mockResolvedValue({});
-      mockOrdersService.updateStatus.mockResolvedValue({});
-      mockPaymentsService.markCodPaid.mockResolvedValue({});
+      mockPrismaService.order.update.mockResolvedValue({});
+      mockPrismaService.payment.update.mockResolvedValue({});
 
       const result = await service.addTracking('ship-1', {
         status: ShipmentStatus.DELIVERED,
@@ -197,10 +232,18 @@ describe('ShipmentsService', () => {
       });
 
       expect(mockPrismaService.shipmentTracking.create).toHaveBeenCalled();
-      expect(mockOrdersService.updateStatus).toHaveBeenCalledWith('order-1', {
-        status: OrderStatus.DELIVERED,
-      });
-      expect(mockPaymentsService.markCodPaid).toHaveBeenCalledWith('order-1');
+      expect(mockPrismaService.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'order-1' },
+          data: expect.objectContaining({ status: OrderStatus.DELIVERED }),
+        }),
+      );
+      expect(mockPrismaService.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { orderId: 'order-1' },
+          data: expect.objectContaining({ status: 'PAID' }),
+        }),
+      );
       expect(result.id).toBe('track-node');
     });
 
@@ -208,16 +251,18 @@ describe('ShipmentsService', () => {
       mockPrismaService.shipment.findUnique.mockResolvedValue(mockShipment);
       mockPrismaService.shipmentTracking.create.mockResolvedValue({});
       mockPrismaService.shipment.update.mockResolvedValue({});
-      mockOrdersService.cancelOrder.mockResolvedValue({});
+      mockPrismaService.order.update.mockResolvedValue({});
 
       await service.addTracking('ship-1', {
         status: ShipmentStatus.FAILED,
         description: 'Khách không nghe máy',
       });
 
-      expect(mockOrdersService.cancelOrder).toHaveBeenCalledWith(
-        'user-1',
-        'order-1',
+      expect(mockPrismaService.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'order-1' },
+          data: expect.objectContaining({ status: OrderStatus.CANCELLED }),
+        }),
       );
     });
   });

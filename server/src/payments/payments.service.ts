@@ -16,7 +16,7 @@ import {
   COD_PROVIDER,
   VNPAY_PROVIDER,
 } from './interfaces/payment-provider.interface.js';
-import { PaymentMethod, PaymentStatus } from '../generated/prisma/enums.js';
+import { PaymentMethod, PaymentStatus, OrderStatus } from '../generated/prisma/enums.js';
 import { toNumber } from '../common/helpers/price.hepler.js';
 
 @Injectable()
@@ -87,8 +87,9 @@ export class PaymentsService {
   async handleVnpayIpn(query: Record<string, string>) {
     const result = await this.vnpayProvider.verifyCallback(query);
 
-    const payment = await this.prisma.payment.findFirst({
+    const payment = await this.prisma.payment.findUnique({
       where: { orderId: result.orderId },
+      include: { order: true },
     });
 
     if (!payment) return { RspCode: '01', Message: 'Payment not found' };
@@ -97,6 +98,24 @@ export class PaymentsService {
     }
 
     if (result.isSuccess) {
+      if (payment.order.status === OrderStatus.CANCELLED) {
+        await this.prisma.$transaction([
+          this.prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: PaymentStatus.REFUNDED,
+              transactionId: result.transactionId,
+              paidAt: new Date(),
+            },
+          }),
+          this.prisma.order.update({
+            where: { id: payment.orderId },
+            data: { paymentStatus: PaymentStatus.REFUNDED },
+          }),
+        ]);
+        return { RspCode: '00', Message: 'Order already cancelled, marked as refunded' };
+      }
+
       await this.prisma.$transaction([
         this.prisma.payment.update({
           where: { id: payment.id },

@@ -189,7 +189,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: true,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue(null);
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
       const result = await service.handleVnpayIpn(mockQuery);
       expect(result).toEqual({ RspCode: '01', Message: 'Payment not found' });
@@ -200,7 +200,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: true,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         status: PaymentStatus.PAID,
       });
@@ -218,10 +218,11 @@ describe('PaymentsService', () => {
         isSuccess: true,
         transactionId: 'tx-999',
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         orderId: 'order-1',
         status: PaymentStatus.PENDING,
+        order: { status: 'CONFIRMED' },
       });
       mockPrismaService.payment.update.mockResolvedValue({});
       mockPrismaService.order.update.mockResolvedValue({});
@@ -242,7 +243,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: false,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         orderId: 'order-1',
         status: PaymentStatus.PENDING,

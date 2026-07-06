@@ -111,16 +111,6 @@ export class OrdersService {
     let couponId: string | null = null;
     let discountAmount = 0;
 
-    if (dto.couponCode) {
-      const result = await this.couponsService.applyToOrder(
-        userId,
-        dto.couponCode,
-        subtotal,
-      );
-      couponId = result.coupon.id;
-      discountAmount = result.discountAmount;
-    }
-
     const totalWeight = pricedItems.reduce(
       (sum) => sum + (Number(process.env.GHN_DEFAULT_ITEM_WEIGHT) || 500),
       0,
@@ -136,8 +126,6 @@ export class OrdersService {
       insuranceValue: Number(process.env.GHN_INSURANCE_VALUE) || 0,
       codAmount: 0,
     });
-
-    const total = subtotal - discountAmount + shippingFee;
 
     const shippingSnapshot = {
       fullName: address.fullName,
@@ -170,6 +158,28 @@ export class OrdersService {
             );
           }
         }
+
+        if (dto.couponCode) {
+          const couponRows = await tx.$queryRaw<{ id: string }[]>`
+            SELECT id FROM coupons
+            WHERE code = ${dto.couponCode}
+            FOR UPDATE
+          `;
+          if (couponRows.length === 0) {
+            throw new BadRequestException('Coupon not found');
+          }
+
+          const result = await this.couponsService.applyToOrder(
+            userId,
+            dto.couponCode,
+            subtotal,
+            tx,
+          );
+          couponId = result.coupon.id;
+          discountAmount = result.discountAmount;
+        }
+
+        const total = subtotal - discountAmount + shippingFee;
 
         const orderId = uuidv7();
         const order = await tx.order.create({
@@ -210,12 +220,14 @@ export class OrdersService {
           include: { items: true },
         });
 
-        for (const item of pricedItems) {
-          await tx.inventory.update({
-            where: { variantId: item.variantId },
-            data: { reservedQuantity: { increment: item.quantity } },
-          });
-        }
+        await Promise.all(
+          pricedItems.map((item) =>
+            tx.inventory.update({
+              where: { variantId: item.variantId },
+              data: { reservedQuantity: { increment: item.quantity } },
+            }),
+          ),
+        );
 
         if (couponId) {
           await tx.coupon.update({
@@ -244,7 +256,7 @@ export class OrdersService {
         return order;
       },
       {
-        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         timeout: 10000,
       },
     );
@@ -335,7 +347,7 @@ export class OrdersService {
           data: { status: OrderStatus.CANCELLED },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 
@@ -430,7 +442,7 @@ export class OrdersService {
           data: { status: dto.status },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 }

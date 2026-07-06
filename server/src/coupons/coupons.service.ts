@@ -217,8 +217,9 @@ export class CouponsService {
     };
   }
 
-  async applyToOrder(userId: string, code: string, subtotal: number) {
-    const coupon = await this.prisma.coupon.findUnique({
+  async applyToOrder(userId: string, code: string, subtotal: number, tx?: any) {
+    const prismaClient = tx ?? this.prisma;
+    const coupon = await prismaClient.coupon.findUnique({
       where: { code },
       include: {
         usages: { where: { userId } },
