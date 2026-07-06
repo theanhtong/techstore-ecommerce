@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { UpdateCouponDto } from './dto/update-coupon.dto.js';
 import { ValidateCouponDto } from './dto/validate-coupon.dto.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
+import { clampToCampaignPeriod } from '../common/helpers/campaign-period.helper.js';
 import { toNumber } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
@@ -29,20 +30,27 @@ export class CouponsService {
     if (existing)
       throw new ConflictException(`Coupon code "${dto.code}" already exists`);
 
+    let startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    let endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+
     if (dto.campaignId) {
       const campaign = await this.prisma.campaign.findUnique({
         where: { id: dto.campaignId },
       });
       if (!campaign)
         throw new NotFoundException(`Campaign #${dto.campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(campaign, dto.startsAt, dto.endsAt);
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.coupon.create({
       data: {
         id: uuidv7(),
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -83,23 +91,55 @@ export class CouponsService {
   }
 
   async update(id: string, dto: UpdateCouponDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
 
     if (dto.code) {
-      const existing = await this.prisma.coupon.findUnique({
+      const codeOwner = await this.prisma.coupon.findUnique({
         where: { code: dto.code },
       });
-      if (existing && existing.id !== id) {
+      if (codeOwner && codeOwner.id !== id) {
         throw new ConflictException(`Coupon code "${dto.code}" already exists`);
       }
+    }
+
+    const campaignId =
+      dto.campaignId !== undefined ? dto.campaignId : existing.campaignId;
+
+    let startsAt =
+      dto.startsAt !== undefined
+        ? dto.startsAt
+          ? new Date(dto.startsAt)
+          : null
+        : existing.startsAt;
+    let endsAt =
+      dto.endsAt !== undefined
+        ? dto.endsAt
+          ? new Date(dto.endsAt)
+          : null
+        : existing.endsAt;
+
+    if (campaignId) {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id: campaignId },
+      });
+      if (!campaign)
+        throw new NotFoundException(`Campaign #${campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(
+        campaign,
+        startsAt?.toISOString(),
+        endsAt?.toISOString(),
+      );
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.coupon.update({
       where: { id },
       data: {
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        startsAt,
+        endsAt,
       },
     });
   }

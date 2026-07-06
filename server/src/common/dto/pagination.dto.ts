@@ -1,5 +1,6 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
+import { OrderStatus } from '../../generated/prisma/enums.js';
 import { Type } from 'class-transformer';
 
 export class PaginationDto {
@@ -18,6 +19,10 @@ export class PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
 
   get skip(): number {
     return (this.page - 1) * this.limit;

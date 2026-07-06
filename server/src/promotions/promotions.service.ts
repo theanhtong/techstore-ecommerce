@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { PromotionScope } from '../generated/prisma/enums.js';
 import { UpdatePromotionDto } from './dto/update-promotion.dto.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
+import { clampToCampaignPeriod } from '../common/helpers/campaign-period.helper.js';
 import { toNumber } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
@@ -41,20 +42,27 @@ export class PromotionsService {
   ) {}
 
   async create(dto: CreatePromotionDto) {
+    let startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    let endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+
     if (dto.campaignId) {
       const campaign = await this.prisma.campaign.findUnique({
         where: { id: dto.campaignId },
       });
       if (!campaign)
         throw new NotFoundException(`Campaign #${dto.campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(campaign, dto.startsAt, dto.endsAt);
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.promotion.create({
       data: {
         id: uuidv7(),
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -99,14 +107,46 @@ export class PromotionsService {
   }
 
   async update(id: string, dto: UpdatePromotionDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+
+    const campaignId =
+      dto.campaignId !== undefined ? dto.campaignId : existing.campaignId;
+
+    let startsAt =
+      dto.startsAt !== undefined
+        ? dto.startsAt
+          ? new Date(dto.startsAt)
+          : null
+        : existing.startsAt;
+    let endsAt =
+      dto.endsAt !== undefined
+        ? dto.endsAt
+          ? new Date(dto.endsAt)
+          : null
+        : existing.endsAt;
+
+    if (campaignId) {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id: campaignId },
+      });
+      if (!campaign)
+        throw new NotFoundException(`Campaign #${campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(
+        campaign,
+        startsAt?.toISOString(),
+        endsAt?.toISOString(),
+      );
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
+    }
 
     return this.prisma.promotion.update({
       where: { id },
       data: {
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -133,8 +173,8 @@ export class PromotionsService {
 
     if (dto.discountType === 'FIXED_AMOUNT') {
       throw new BadRequestException(
-        'Giảm giá theo Product/Category/Brand chỉ hỗ trợ PERCENTAGE. ' +
-          'Dùng Coupon (cấp order) nếu cần giảm giá cố định.',
+        'Product, Category, and Brand promotions only support percentage-based discounts. ' +
+          'Use an order-level coupon if you need a fixed amount discount.',
       );
     }
 

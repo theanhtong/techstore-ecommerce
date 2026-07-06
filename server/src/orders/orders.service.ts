@@ -344,6 +344,7 @@ export class OrdersService {
       ...(query.search && {
         orderNumber: { contains: query.search, mode: 'insensitive' as const },
       }),
+      ...(query.status && { status: query.status }),
     };
 
     const [data, total] = await this.prisma.$transaction([
@@ -355,6 +356,9 @@ export class OrdersService {
         include: {
           user: { select: { id: true, name: true, email: true } },
           items: true,
+          shipment: {
+            include: { trackingHistory: { orderBy: { createdAt: 'asc' } } },
+          },
         },
       }),
       this.prisma.order.count({ where }),

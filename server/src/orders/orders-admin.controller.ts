@@ -19,7 +19,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.STAFF)
 @Controller('admin/orders')
 export class OrdersAdminController {
   constructor(private readonly ordersService: OrdersService) {}
