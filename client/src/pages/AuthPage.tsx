@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router";
 import { client } from "../api/client";
@@ -14,7 +14,7 @@ export default function AuthPage() {
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const fetchCart = useCartStore((state) => state.fetchCart);
-  
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -23,12 +23,14 @@ export default function AuthPage() {
   const [verifying, setVerifying] = useState(!!verificationToken);
   const [verifySuccess, setVerifySuccess] = useState<string | null>(null);
 
-  useState(() => {
+  useEffect(() => {
     if (verificationToken) {
       client
         .get(`/auth/verify-email?token=${verificationToken}`)
         .then((res) => {
-          setVerifySuccess(res.data.message || "Xác thực địa chỉ Email thành công.");
+          setVerifySuccess(res.data.message || "Xác thực địa chỉ Email thành công. Vui lòng đăng nhập.");
+          setIsRegister(false);
+          navigate("/auth", { replace: true });
         })
         .catch((err) => {
           setErrorMsg(err.response?.data?.message || "Xác thực Email thất bại hoặc mã xác thực đã hết hạn.");
@@ -37,9 +39,10 @@ export default function AuthPage() {
           setVerifying(false);
         });
     }
-  });
+  }, [verificationToken, navigate]);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
+  const password = watch("password");
 
   const onSubmit = async (data: any) => {
     setLoading(true);
@@ -170,6 +173,30 @@ export default function AuthPage() {
             <p className="mt-1.5 text-xs text-hazard font-medium">{errors.password.message as string}</p>
           )}
         </div>
+
+        {isRegister && (
+          <div>
+            <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">
+              Xác nhận mật khẩu
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+                {...register("confirmPassword", {
+                  required: "Xác nhận mật khẩu là bắt buộc",
+                  validate: (value) =>
+                    value === password || "Mật khẩu xác nhận không khớp",
+                })}
+              />
+              <KeyRound className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5" />
+            </div>
+            {errors.confirmPassword && (
+              <p className="mt-1.5 text-xs text-hazard font-medium">{errors.confirmPassword.message as string}</p>
+            )}
+          </div>
+        )}
 
         <button
           type="submit"

@@ -14,10 +14,18 @@ import {
 interface OrderItem {
   id: string;
   variantId: string;
-  sku: string;
-  name: string;
-  price: string;
   quantity: number;
+  unitPrice: string;
+  total: string;
+  variantSnapshot?: {
+    sku: string;
+    price: number;
+    salePrice: number | null;
+    color?: string | null;
+    productName: string;
+    productSlug: string;
+    imageUrl?: string | null;
+  } | null;
 }
 
 interface Payment {
@@ -50,6 +58,7 @@ interface Order {
   paymentStatus: string;
   total: string;
   notes?: string | null;
+  cancelReason?: string | null;
   createdAt: string;
   items: OrderItem[];
   payment?: Payment | null;
@@ -62,6 +71,11 @@ export default function OrdersPage() {
   // Modal tracking states
   const [activeModalId, setActiveModalId] = useState<string | null>(null);
   const [expandedTracking, setExpandedTracking] = useState<Record<string, boolean>>({});
+
+  // Cancellation modal states
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancelReasonOption, setCancelReasonOption] = useState("Thay đổi ý định mua sắm");
+  const [cancelReasonCustom, setCancelReasonCustom] = useState("");
 
   // Fetch all user orders
   const { data, isLoading, error } = useQuery({
@@ -87,14 +101,17 @@ export default function OrdersPage() {
 
   // Cancel order mutation
   const cancelOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      return client.patch(`/orders/my/${orderId}/cancel`);
+    mutationFn: async ({ orderId, reason }: { orderId: string; reason: string }) => {
+      return client.patch(`/orders/my/${orderId}/cancel`, { reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       if (activeModalId) {
         queryClient.invalidateQueries({ queryKey: ["order-details", activeModalId] });
       }
+      setCancellingOrderId(null);
+      setCancelReasonOption("Thay đổi ý định mua sắm");
+      setCancelReasonCustom("");
     },
     onError: (err: any) => {
       alert(err.response?.data?.message || "Không thể hủy đơn hàng này.");
@@ -250,14 +267,28 @@ export default function OrdersPage() {
                 {/* Short items brief */}
                 <div className="px-6 py-6 space-y-4">
                   <div className="space-y-2">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center text-sm">
-                        <span className="text-ink/75 truncate">
-                          {item.name} <span className="text-ink/40 font-medium">x{item.quantity}</span>
-                        </span>
-                        <span className="font-semibold text-ink">{formatPrice(Number(item.price) * item.quantity)}</span>
-                      </div>
-                    ))}
+                    {order.items.map((item) => {
+                      const snapshot = item.variantSnapshot || ({} as any);
+                      const displayName = snapshot.productName || "Sản phẩm";
+                      const displayPrice = item.unitPrice || snapshot.salePrice || snapshot.price || 0;
+                      return (
+                        <div key={item.id} className="flex justify-between items-center text-sm gap-4">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {snapshot.imageUrl && (
+                              <img
+                                src={snapshot.imageUrl}
+                                alt={displayName}
+                                className="w-8 h-8 object-cover rounded-md border border-gray-100 flex-shrink-0"
+                              />
+                            )}
+                            <span className="text-ink/75 truncate font-medium">
+                              {displayName} {snapshot.color ? `(${snapshot.color})` : ""} <span className="text-ink/40 font-medium">x{item.quantity}</span>
+                            </span>
+                          </div>
+                          <span className="font-semibold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -276,11 +307,10 @@ export default function OrdersPage() {
                       {/* Cancel order button */}
                       {isCancellable && (
                         <button
-                          onClick={() => cancelOrderMutation.mutate(order.id)}
-                          disabled={cancelOrderMutation.isPending}
+                          onClick={() => setCancellingOrderId(order.id)}
                           className="border border-hazard text-hazard hover:bg-hazard hover:text-substrate px-3.5 py-2 rounded-md text-[11px] font-bold uppercase transition-colors cursor-pointer"
                         >
-                          {cancelOrderMutation.isPending ? "..." : "Hủy đơn hàng"}
+                          Hủy đơn hàng
                         </button>
                       )}
 
@@ -356,14 +386,28 @@ export default function OrdersPage() {
                     Danh sách sản phẩm
                   </h4>
                   <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                    {activeOrderDetails.items.map((item: any) => (
-                      <div key={item.id} className="flex justify-between items-center text-xs">
-                        <span className="text-ink/85 font-medium leading-tight">
-                          {item.name || `SKU: ${item.sku}`} <span className="text-ink/45">x{item.quantity}</span>
-                        </span>
-                        <span className="font-semibold text-ink">{formatPrice(Number(item.price) * item.quantity)}</span>
-                      </div>
-                    ))}
+                    {activeOrderDetails.items.map((item: any) => {
+                      const snapshot = item.variantSnapshot || ({} as any);
+                      const displayName = snapshot.productName || "Sản phẩm";
+                      const displayPrice = item.unitPrice || snapshot.salePrice || snapshot.price || 0;
+                      return (
+                        <div key={item.id} className="flex justify-between items-center text-xs gap-4 py-1">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {snapshot.imageUrl && (
+                              <img
+                                src={snapshot.imageUrl}
+                                alt={displayName}
+                                className="w-7 h-7 object-cover rounded border border-gray-100 flex-shrink-0"
+                              />
+                            )}
+                            <span className="text-ink/85 font-medium leading-tight truncate">
+                              {displayName} {snapshot.color ? `(${snapshot.color})` : ""} <span className="text-ink/45">x{item.quantity}</span>
+                            </span>
+                          </div>
+                          <span className="font-semibold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   {/* Coupon Details */}
                   {activeOrderDetails.coupon && (
@@ -394,6 +438,12 @@ export default function OrdersPage() {
                     <div>
                       <h5 className="font-bold text-ink uppercase tracking-wider mb-2">Ghi chú nhận hàng</h5>
                       <div className="italic text-ink/70">"{activeOrderDetails.notes}"</div>
+                    </div>
+                  )}
+                  {activeOrderDetails.status === "CANCELLED" && activeOrderDetails.cancelReason && (
+                    <div className="col-span-1 md:col-span-2 bg-rose-50 border border-rose-100 rounded-lg p-3 text-rose-800">
+                      <span className="font-bold uppercase text-[10px] block mb-1">Lý do hủy đơn hàng:</span>
+                      <p className="font-semibold text-xs">{activeOrderDetails.cancelReason}</p>
                     </div>
                   )}
                 </div>
@@ -443,6 +493,80 @@ export default function OrdersPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Cancellation modal dialog */}
+      {cancellingOrderId && (
+        <div className="fixed inset-0 z-[100] bg-[#000000]/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 relative shadow-lg animate-fadeIn space-y-4 text-xs font-semibold">
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2">
+              Lý do hủy đơn hàng
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-ink/50 uppercase tracking-wider mb-1">
+                  Chọn lý do hủy
+                </label>
+                <select
+                  value={cancelReasonOption}
+                  onChange={(e) => setCancelReasonOption(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                >
+                  <option value="Thay đổi ý định mua sắm">Thay đổi ý định mua sắm</option>
+                  <option value="Tìm thấy giá rẻ hơn ở nơi khác">Tìm thấy giá rẻ hơn ở nơi khác</option>
+                  <option value="Thời gian giao hàng quá lâu">Thời gian giao hàng quá lâu</option>
+                  <option value="Trùng đơn hàng / đặt nhầm cấu hình">Trùng đơn hàng / đặt nhầm cấu hình</option>
+                  <option value="Lý do khác">Lý do khác</option>
+                </select>
+              </div>
+
+              {cancelReasonOption === "Lý do khác" && (
+                <div>
+                  <label className="block text-[10px] font-bold text-ink/50 uppercase tracking-wider mb-1">
+                    Nhập lý do chi tiết
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Vui lòng cho biết lý do của bạn..."
+                    value={cancelReasonCustom}
+                    onChange={(e) => setCancelReasonCustom(e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-md p-3 text-xs outline-none focus:border-ink"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancellingOrderId(null);
+                  setCancelReasonOption("Thay đổi ý định mua sắm");
+                  setCancelReasonCustom("");
+                }}
+                className="bg-gray-100 text-ink text-xs font-bold px-4 py-2 rounded-md hover:bg-gray-200 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={cancelOrderMutation.isPending}
+                onClick={() => {
+                  const finalReason = cancelReasonOption === "Lý do khác" ? cancelReasonCustom : cancelReasonOption;
+                  if (cancelReasonOption === "Lý do khác" && !cancelReasonCustom.trim()) {
+                    alert("Vui lòng nhập lý do cụ thể.");
+                    return;
+                  }
+                  cancelOrderMutation.mutate({ orderId: cancellingOrderId, reason: finalReason });
+                }}
+                className="bg-rose-600 text-white hover:bg-rose-700 text-xs font-bold px-4 py-2 rounded-md transition-colors cursor-pointer"
+              >
+                {cancelOrderMutation.isPending ? "Đang xử lý..." : "Xác nhận hủy"}
+              </button>
+            </div>
           </div>
         </div>
       )}

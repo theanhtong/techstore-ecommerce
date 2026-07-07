@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Route, Routes, Link, NavLink, Navigate, Outlet } from "react-router";
 import { useAuthStore } from "./store/useAuthStore";
 import { useCartStore } from "./store/useCartStore";
@@ -178,6 +178,14 @@ const CustomerLayout = () => {
   );
 };
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const user = useAuthStore((state) => state.user);
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  return <>{children}</>;
+};
+
 export default function App() {
   const fetchCart = useCartStore((state) => state.fetchCart);
 
@@ -194,10 +202,11 @@ export default function App() {
           <Route path="/products" element={<CatalogPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/auth/verify-email" element={<AuthPage />} />
+          <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         </Route>
 
         {/* System Administration Layout */}

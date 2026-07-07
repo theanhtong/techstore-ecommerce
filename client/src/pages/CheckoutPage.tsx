@@ -26,7 +26,28 @@ interface Address {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const { items, subtotal, clearCart } = useCartStore();
+  const { items, clearCart } = useCartStore();
+  const [checkoutItemIds, setCheckoutItemIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("checkout_item_ids");
+    if (saved) {
+      try {
+        setCheckoutItemIds(JSON.parse(saved));
+      } catch (err) {
+        console.error("Error parsing checkout items", err);
+      }
+    }
+  }, []);
+
+  const checkoutItems = checkoutItemIds.length > 0
+    ? items.filter((i) => checkoutItemIds.includes(i.id))
+    : items;
+
+  const checkoutSubtotal = checkoutItems.reduce(
+    (sum, item) => sum + (item.effectivePrice || item.variant.price) * item.quantity,
+    0
+  );
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -45,6 +66,27 @@ export default function CheckoutPage() {
     wardName: "Phường Bến Nghé",
     wardCode: "20109",
   });
+
+  const [provinces, setProvinces] = useState<{ id: number; name: string }[]>([]);
+  const [districts, setDistricts] = useState<{ id: number; name: string; provinceId: number }[]>([]);
+  const [wards, setWards] = useState<{ code: string; name: string; districtId: number }[]>([]);
+
+  useEffect(() => {
+    client.get("/address/provinces")
+      .then(res => setProvinces(res.data))
+      .catch(err => console.error("Error fetching provinces", err));
+
+    if (newAddress.provinceId) {
+      client.get(`/address/districts?provinceId=${newAddress.provinceId}`)
+        .then(res => setDistricts(res.data))
+        .catch(err => console.error("Error fetching districts", err));
+    }
+    if (newAddress.districtId) {
+      client.get(`/address/wards?districtId=${newAddress.districtId}`)
+        .then(res => setWards(res.data))
+        .catch(err => console.error("Error fetching wards", err));
+    }
+  }, []);
 
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [couponResult, setCouponResult] = useState<any>(null);
@@ -114,7 +156,7 @@ export default function CheckoutPage() {
     try {
       // 1. Create order on backend
       const orderRes = await client.post("/orders", {
-        cartItemIds: items.map((i) => i.id),
+        cartItemIds: checkoutItems.map((i) => i.id),
         addressId: selectedAddressId,
         couponCode: couponCode || undefined,
         notes: notes || undefined,
@@ -144,8 +186,8 @@ export default function CheckoutPage() {
     }
   };
 
-  const finalAmount = couponResult ? couponResult.finalAmount : subtotal;
   const discountAmount = couponResult ? couponResult.discountAmount : 0;
+  const finalAmount = couponResult ? Math.max(checkoutSubtotal - discountAmount, 0) : checkoutSubtotal;
 
   return (
     <div className="space-y-8">
@@ -224,33 +266,86 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Tỉnh / Thành phố</label>
-                    <input
-                      type="text"
+                    <select
                       required
-                      value={newAddress.provinceName}
-                      onChange={(e) => setNewAddress({ ...newAddress, provinceName: e.target.value })}
+                      value={newAddress.provinceId || ""}
+                      onChange={(e) => {
+                        const pid = Number(e.target.value);
+                        const name = provinces.find(p => p.id === pid)?.name || "";
+                        setNewAddress({
+                          ...newAddress,
+                          provinceId: pid,
+                          provinceName: name,
+                          districtId: 0,
+                          districtName: "",
+                          wardCode: "",
+                          wardName: "",
+                        });
+                        setDistricts([]);
+                        setWards([]);
+                        if (pid) {
+                          client.get(`/address/districts?provinceId=${pid}`).then(res => setDistricts(res.data));
+                        }
+                      }}
                       className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
-                    />
+                    >
+                      <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                      {provinces.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Quận / Huyện</label>
-                    <input
-                      type="text"
+                    <select
                       required
-                      value={newAddress.districtName}
-                      onChange={(e) => setNewAddress({ ...newAddress, districtName: e.target.value })}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
-                    />
+                      disabled={!newAddress.provinceId}
+                      value={newAddress.districtId || ""}
+                      onChange={(e) => {
+                        const did = Number(e.target.value);
+                        const name = districts.find(d => d.id === did)?.name || "";
+                        setNewAddress({
+                          ...newAddress,
+                          districtId: did,
+                          districtName: name,
+                          wardCode: "",
+                          wardName: "",
+                        });
+                        setWards([]);
+                        if (did) {
+                          client.get(`/address/wards?districtId=${did}`).then(res => setWards(res.data));
+                        }
+                      }}
+                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink disabled:bg-gray-100"
+                    >
+                      <option value="">-- Chọn Quận / Huyện --</option>
+                      {districts.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Phường / Xã</label>
-                    <input
-                      type="text"
+                    <select
                       required
-                      value={newAddress.wardName}
-                      onChange={(e) => setNewAddress({ ...newAddress, wardName: e.target.value })}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
-                    />
+                      disabled={!newAddress.districtId}
+                      value={newAddress.wardCode || ""}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const name = wards.find(w => w.code === code)?.name || "";
+                        setNewAddress({
+                          ...newAddress,
+                          wardCode: code,
+                          wardName: name,
+                        });
+                      }}
+                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink disabled:bg-gray-100"
+                    >
+                      <option value="">-- Chọn Phường / Xã --</option>
+                      {wards.map(w => (
+                        <option key={w.code} value={w.code}>{w.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -357,7 +452,7 @@ export default function CheckoutPage() {
 
             {/* List mini items */}
             <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
-              {items.map((item) => (
+              {checkoutItems.map((item) => (
                 <div key={item.id} className="flex gap-4 items-center">
                   <div className="w-10 h-10 bg-gray-50 rounded border border-gray-100 flex items-center justify-center flex-shrink-0">
                     {item.variant?.images?.[0]?.url ? (
@@ -381,7 +476,7 @@ export default function CheckoutPage() {
             <div className="space-y-4 text-xs font-medium text-ink uppercase pt-6 border-t border-gray-100">
               <div className="flex justify-between">
                 <span className="text-ink/50">Cộng tiền hàng</span>
-                <span className="font-semibold">{formatPrice(subtotal)}</span>
+                <span className="font-semibold">{formatPrice(checkoutSubtotal)}</span>
               </div>
 
               {couponResult && (
@@ -406,7 +501,7 @@ export default function CheckoutPage() {
             {/* Submit checkout buttons */}
             <button
               onClick={handleCheckout}
-              disabled={checkoutLoading || items.length === 0}
+              disabled={checkoutLoading || checkoutItems.length === 0}
               className="w-full bg-ink text-substrate hover:bg-hazard text-xs font-bold uppercase py-4 rounded-md transition-colors cursor-pointer text-center"
             >
               {checkoutLoading ? "Đang xử lý đặt hàng..." : "Xác nhận đặt hàng"}

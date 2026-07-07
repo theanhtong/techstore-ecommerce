@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { useCartStore } from "../store/useCartStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -16,12 +16,31 @@ import {
 export default function CartPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const { items, subtotal, updateItemQuantity, removeItem } = useCartStore();
+  const { items, updateItemQuantity, removeItem } = useCartStore();
 
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponResult, setCouponResult] = useState<any>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  // Chọn toàn bộ sản phẩm mặc định khi mở trang giỏ hàng
+  useEffect(() => {
+    if (items.length > 0 && selectedItemIds.length === 0) {
+      setSelectedItemIds(items.map((i) => i.id));
+    }
+  }, [items]);
+
+  const selectedItems = items.filter((item) => selectedItemIds.includes(item.id));
+  const selectedSubtotal = selectedItems.reduce(
+    (sum, item) => sum + item.effectivePrice * item.quantity,
+    0
+  );
+
+  // Xóa mã giảm giá khi danh sách sản phẩm chọn thay đổi để bắt buộc kiểm tra lại điều kiện áp dụng
+  useEffect(() => {
+    clearCoupon();
+  }, [selectedItemIds]);
 
   const handleValidateCoupon = async () => {
     if (!couponCode) return;
@@ -31,11 +50,11 @@ export default function CartPage() {
     try {
       const res = await client.post("/coupons/validate", {
         code: couponCode,
-        orderSubtotal: subtotal,
+        orderSubtotal: selectedSubtotal,
       });
       if (res.data.isValid) {
         setCouponResult(res.data);
-        // Persist coupon locally for checkout
+        // Lưu lại thông tin coupon đã chọn để dùng cho bước thanh toán
         localStorage.setItem("applied_coupon", JSON.stringify({
           code: couponCode,
           result: res.data
@@ -51,6 +70,8 @@ export default function CartPage() {
   };
 
   const handleProceedToCheckout = () => {
+    // Lưu danh sách id các sản phẩm được tích chọn mua vào localStorage
+    localStorage.setItem("checkout_item_ids", JSON.stringify(selectedItemIds));
     if (!user) {
       navigate("/auth");
     } else {
@@ -85,8 +106,8 @@ export default function CartPage() {
     );
   }
 
-  const finalAmount = couponResult ? couponResult.finalAmount : subtotal;
   const discountAmount = couponResult ? couponResult.discountAmount : 0;
+  const finalAmount = Math.max(selectedSubtotal - discountAmount, 0);
 
   return (
     <div className="space-y-8">
@@ -104,15 +125,57 @@ export default function CartPage() {
         {/* Left Column: Cart Items List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6">
+            {/* Select All Checkbox */}
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
+              <input
+                type="checkbox"
+                checked={items.length > 0 && selectedItemIds.length === items.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedItemIds(items.map((i) => i.id));
+                  } else {
+                    setSelectedItemIds([]);
+                  }
+                }}
+                className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-300 cursor-pointer"
+              />
+              <span 
+                className="text-xs font-bold text-ink/70 uppercase tracking-wider select-none cursor-pointer"
+                onClick={() => {
+                  if (selectedItemIds.length === items.length) {
+                    setSelectedItemIds([]);
+                  } else {
+                    setSelectedItemIds(items.map((i) => i.id));
+                  }
+                }}
+              >
+                Chọn tất cả ({items.length} sản phẩm)
+              </span>
+            </div>
+
             {items.map((item) => (
-              <div key={item.id} className="flex flex-col sm:flex-row gap-6 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                {/* Image */}
-                <div className="w-20 h-20 bg-gray-50 border border-gray-100 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {item.variant?.images?.[0]?.url ? (
-                    <img src={item.variant.images[0].url} alt={item.variant.product?.name} className="object-contain p-2 w-full h-full" />
-                  ) : (
-                    <span className="text-[10px] text-ink/30 font-medium">No Image</span>
-                  )}
+              <div key={item.id} className="flex flex-col sm:flex-row gap-6 border-b border-gray-100 pb-6 last:border-0 last:pb-0 items-start sm:items-center">
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={selectedItemIds.includes(item.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedItemIds([...selectedItemIds, item.id]);
+                      } else {
+                        setSelectedItemIds(selectedItemIds.filter((id) => id !== item.id));
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-300 cursor-pointer"
+                  />
+                  {/* Image */}
+                  <div className="w-20 h-20 bg-gray-50 border border-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                    {item.variant?.images?.[0]?.url ? (
+                      <img src={item.variant.images[0].url} alt={item.variant.product?.name} className="object-contain p-2 w-full h-full" />
+                    ) : (
+                      <span className="text-[10px] text-ink/30 font-medium">No Image</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Details info */}
@@ -166,7 +229,7 @@ export default function CartPage() {
             <div className="space-y-4 text-xs font-medium text-ink uppercase pb-6 border-b border-gray-100">
               <div className="flex justify-between">
                 <span className="text-ink/50">Tạm tính</span>
-                <span className="font-semibold text-ink">{formatPrice(subtotal)}</span>
+                <span className="font-semibold text-ink">{formatPrice(selectedSubtotal)}</span>
               </div>
 
               {couponResult && (
@@ -229,7 +292,12 @@ export default function CartPage() {
             <div className="space-y-3 pt-2">
               <button
                 onClick={handleProceedToCheckout}
-                className="w-full bg-ink text-substrate hover:bg-hazard text-xs font-bold uppercase py-4 rounded-md transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                disabled={selectedItemIds.length === 0}
+                className={`w-full text-xs font-bold uppercase py-4 rounded-md transition-colors flex items-center justify-center gap-1.5 ${
+                  selectedItemIds.length > 0
+                    ? "bg-ink text-substrate hover:bg-hazard cursor-pointer"
+                    : "bg-gray-100 text-ink/30 cursor-not-allowed"
+                }`}
               >
                 <span>Tiến hành thanh toán</span>
                 <ChevronRight className="w-4 h-4" />

@@ -75,6 +75,7 @@ export default function ProductDetailPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
 
   const [ratingValue, setRatingValue] = useState(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -91,6 +92,8 @@ export default function ProductDetailPage() {
       } else {
         setSelectedVariantId(product.variants[0].id);
       }
+      setSelectedImageIndex(0);
+      setQuantity(1);
     }
   }, [product, variantParam]);
 
@@ -161,7 +164,7 @@ export default function ProductDetailPage() {
         inventory: activeVariant.inventory || { quantity: 99, reservedQuantity: 0 },
       };
 
-      await addItem(activeVariant.id, 1, details);
+      await addItem(activeVariant.id, quantity, details);
       setCartSuccess(true);
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err) {
@@ -332,6 +335,7 @@ export default function ProductDetailPage() {
                     onClick={() => {
                       setSelectedVariantId(v.id);
                       setSelectedImageIndex(0);
+                      setQuantity(1);
                     }}
                     className={`border px-4 py-2.5 rounded-md text-xs font-semibold cursor-pointer transition-colors ${activeVariant.id === v.id
                         ? "bg-ink text-white border-ink"
@@ -358,6 +362,32 @@ export default function ProductDetailPage() {
                   Hết hàng tạm thời
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Quantity selector control buttons */}
+          {qtyAvailable > 0 && (
+            <div className="flex items-center gap-4 py-2">
+              <span className="text-xs font-semibold text-ink/50 uppercase tracking-wider">Số lượng:</span>
+              <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="px-3.5 py-1.5 hover:bg-gray-100 text-sm font-bold text-ink transition-colors cursor-pointer"
+                >
+                  -
+                </button>
+                <span className="px-4 text-xs font-extrabold text-ink min-w-[32px] text-center">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.min(qtyAvailable, quantity + 1))}
+                  className="px-3.5 py-1.5 hover:bg-gray-100 text-sm font-bold text-ink transition-colors cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
             </div>
           )}
 
