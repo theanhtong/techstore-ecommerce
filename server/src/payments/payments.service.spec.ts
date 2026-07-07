@@ -40,7 +40,6 @@ const { buildPaginated } =
 describe('PaymentsService', () => {
   let service: any;
 
-  // Định nghĩa mock object dạng Record<string, any> để tránh lỗi type 'never' một cách triệt để
   const mockPrismaService: Record<string, any> = {
     payment: {
       findUnique: jest.fn(),
@@ -55,7 +54,16 @@ describe('PaymentsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
-    $transaction: jest.fn((arr: any) => Promise.all(arr)),
+    $transaction: jest.fn((val: any) => {
+      if (typeof val === 'function') {
+        return val(mockPrismaService);
+      }
+      return Promise.all(val);
+    }),
+    $queryRaw: jest.fn(async () => {
+      const mockResult = await mockPrismaService.payment.findUnique();
+      return mockResult ? [mockResult] : [];
+    }),
   };
 
   const mockOrdersService: Record<string, any> = {};

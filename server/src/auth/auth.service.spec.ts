@@ -29,11 +29,14 @@ describe('AuthService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      deleteMany: jest.fn(),
     },
     emailVerification: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
     session: {
       create: jest.fn(),
@@ -42,6 +45,12 @@ describe('AuthService', () => {
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    $transaction: jest.fn((val: any) => {
+      if (typeof val === 'function') {
+        return val(mockPrismaService);
+      }
+      return Promise.all(val);
+    }),
   };
 
   const mockJwtService: Record<string, any> = {
@@ -78,9 +87,10 @@ describe('AuthService', () => {
       name: 'Test User',
     };
 
-    it('should throw ConflictException if email already exists', async () => {
+    it('should throw ConflictException if user exists and is already verified', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'existing-id',
+        emailVerifiedAt: new Date(),
       });
 
       await expect(service.register(registerDto)).rejects.toThrow(
@@ -88,7 +98,44 @@ describe('AuthService', () => {
       );
     });
 
-    it('should create user, verification token, and send email on success', async () => {
+    it('should throw BadRequestException if existing user not verified but verification requested < 60s ago', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'existing-id',
+        emailVerifiedAt: null,
+      });
+      mockPrismaService.emailVerification.findFirst.mockResolvedValue({
+        createdAt: new Date(),
+      });
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should re-request verification if user exists, not verified and last request > 60s ago', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'existing-id',
+        emailVerifiedAt: null,
+      });
+      mockPrismaService.emailVerification.findFirst.mockResolvedValue({
+        createdAt: new Date(Date.now() - 70 * 1000),
+      });
+      mockHash.mockResolvedValue('hashed_password');
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.emailVerification.deleteMany.mockResolvedValue({});
+      mockPrismaService.emailVerification.create.mockResolvedValue({});
+      mockMailService.sendVerificationEmail.mockResolvedValue(undefined);
+
+      const result = await service.register(registerDto);
+
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(mockPrismaService.emailVerification.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.emailVerification.create).toHaveBeenCalled();
+      expect(mockMailService.sendVerificationEmail).toHaveBeenCalled();
+      expect(result.message).toContain('Mã xác thực mới đã được gửi');
+    });
+
+    it('should create user, verification token, and send email for new user on success', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockHash.mockResolvedValue('hashed_password');
       mockPrismaService.user.create.mockResolvedValue({
@@ -100,13 +147,11 @@ describe('AuthService', () => {
 
       const result = await service.register(registerDto);
 
+      expect(mockPrismaService.user.deleteMany).toHaveBeenCalled();
       expect(mockPrismaService.user.create).toHaveBeenCalled();
       expect(mockPrismaService.emailVerification.create).toHaveBeenCalled();
       expect(mockMailService.sendVerificationEmail).toHaveBeenCalled();
-      expect(result).toEqual({
-        message:
-          'Registration successful. Please check your email to verify your account.',
-      });
+      expect(result.message).toContain('Registration successful');
     });
   });
 
@@ -145,7 +190,92 @@ describe('AuthService', () => {
       expect(mockPrismaService.emailVerification.delete).toHaveBeenCalledWith({
         where: { token: 'valid-token' },
       });
-      expect(result.message).toContain('Email verified successfully');
+      expect(result.message).toContain('Xác thực email thành công');
+    });
+
+    it('should ignore P2025 errors on token deletion', async () => {
+      mockPrismaService.emailVerification.findUnique.mockResolvedValue({
+        userId: 'user-id',
+        expiresAt: new Date(Date.now() + 60000),
+      });
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.emailVerification.delete.mockRejectedValue({
+        code: 'P2025',
+      });
+
+      const result = await service.verifyEmail('valid-token');
+      expect(result.message).toContain('Xác thực email thành công');
+    });
+
+    it('should propagate other errors on token deletion', async () => {
+      mockPrismaService.emailVerification.findUnique.mockResolvedValue({
+        userId: 'user-id',
+        expiresAt: new Date(Date.now() + 60000),
+      });
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.emailVerification.delete.mockRejectedValue(
+        new Error('Db connection error'),
+      );
+
+      await expect(service.verifyEmail('valid-token')).rejects.toThrow(
+        'Db connection error',
+      );
+    });
+  });
+
+  describe('resendVerification', () => {
+    const email = 'test@example.com';
+
+    it('should return security message if user is not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.resendVerification(email);
+      expect(result.message).toContain('hệ thống đã gửi liên kết mới');
+    });
+
+    it('should throw BadRequestException if user is already verified', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        emailVerifiedAt: new Date(),
+      });
+
+      await expect(service.resendVerification(email)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException if last verification requested < 60s ago', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        emailVerifiedAt: null,
+      });
+      mockPrismaService.emailVerification.findFirst.mockResolvedValue({
+        createdAt: new Date(),
+      });
+
+      await expect(service.resendVerification(email)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should recreate verification token and send verification email on success', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        emailVerifiedAt: null,
+      });
+      mockPrismaService.emailVerification.findFirst.mockResolvedValue({
+        createdAt: new Date(Date.now() - 70000),
+      });
+      mockPrismaService.emailVerification.deleteMany.mockResolvedValue({});
+      mockPrismaService.emailVerification.create.mockResolvedValue({});
+      mockMailService.sendVerificationEmail.mockResolvedValue(undefined);
+
+      const result = await service.resendVerification(email);
+
+      expect(mockPrismaService.emailVerification.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.emailVerification.create).toHaveBeenCalled();
+      expect(mockMailService.sendVerificationEmail).toHaveBeenCalled();
+      expect(result.message).toContain('Mã xác thực mới đã được gửi');
     });
   });
 
@@ -160,8 +290,20 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw UnauthorizedException on invalid password', async () => {
+    it('should throw UnauthorizedException if user has no password', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        password: null,
+      });
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw UnauthorizedException on invalid password match', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
         password: 'hashed_password',
       });
       mockCompare.mockResolvedValue(false);
@@ -171,11 +313,38 @@ describe('AuthService', () => {
       );
     });
 
-    it('should return access and refresh tokens on valid credentials', async () => {
+    it('should throw UnauthorizedException if user account is disabled', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        password: 'hashed_password',
+        isActive: false,
+      });
+      mockCompare.mockResolvedValue(true);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw UnauthorizedException if user has not verified email', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        password: 'hashed_password',
+        isActive: true,
+        emailVerifiedAt: null,
+      });
+      mockCompare.mockResolvedValue(true);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should return access and refresh tokens and save session on valid credentials', async () => {
       const mockUser = {
         id: 'user-id',
         email: 'test@example.com',
-        role: 'USER',
+        role: 'CUSTOMER',
         password: 'hashed_password',
         isActive: true,
         emailVerifiedAt: new Date(),
@@ -200,13 +369,21 @@ describe('AuthService', () => {
     const mockPayload = {
       sub: 'user-id',
       email: 'test@example.com',
-      role: 'USER',
+      role: 'CUSTOMER',
     };
 
     it('should throw UnauthorizedException if token verification fails', async () => {
       mockJwtService.verify.mockImplementation(() => {
         throw new Error('Jwt error');
       });
+
+      await expect(service.refresh(token)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw UnauthorizedException if token jti is missing', async () => {
+      mockJwtService.verify.mockReturnValue({ ...mockPayload });
 
       await expect(service.refresh(token)).rejects.toThrow(
         UnauthorizedException,
@@ -227,6 +404,24 @@ describe('AuthService', () => {
       mockPrismaService.session.findUnique.mockResolvedValue({
         id: 'sess-1',
         token: 'hashed-old-rt',
+      });
+
+      await expect(service.refresh(token)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw UnauthorizedException if session has already been refreshed (concurrent delete throws P2025)', async () => {
+      const { createHash } = await import('crypto');
+      const hash = createHash('sha256').update(token).digest('hex');
+
+      mockJwtService.verify.mockReturnValue({ ...mockPayload, jti: 'sess-1' });
+      mockPrismaService.session.findUnique.mockResolvedValue({
+        id: 'sess-1',
+        token: hash,
+      });
+      mockPrismaService.session.delete.mockRejectedValue({
+        code: 'P2025',
       });
 
       await expect(service.refresh(token)).rejects.toThrow(
