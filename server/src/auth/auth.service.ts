@@ -225,7 +225,14 @@ export class AuthService {
     const valid = session.token === hash;
     if (!valid) throw new UnauthorizedException('Invalid refresh token');
 
-    await this.prisma.session.delete({ where: { id: session.id } });
+    try {
+      await this.prisma.session.delete({ where: { id: session.id } });
+    } catch (err: any) {
+      if (err.code === 'P2025') {
+        throw new UnauthorizedException('Session already refreshed or invalid');
+      }
+      throw err;
+    }
 
     return this.generateTokens(payload.sub, payload.email, payload.role);
   }
