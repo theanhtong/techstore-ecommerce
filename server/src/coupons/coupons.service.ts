@@ -21,7 +21,7 @@ export class CouponsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly campaignsService: CampaignsService,
-  ) {}
+  ) { }
 
   async create(dto: CreateCouponDto) {
     const existing = await this.prisma.coupon.findUnique({
@@ -68,6 +68,7 @@ export class CouponsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
+        include: { campaign: { select: { id: true, name: true, isActive: true } }, },
       }),
       this.prisma.coupon.count({ where }),
     ]);
@@ -173,11 +174,12 @@ export class CouponsService {
     }
     if (
       coupon.campaign &&
-      !this.campaignsService.isWithinPeriod(coupon.campaign)
+      (!coupon.campaign.isActive ||
+        !this.campaignsService.isWithinPeriod(coupon.campaign))
     ) {
       return {
         isValid: false,
-        message: 'Chiến dịch của coupon đã kết thúc hoặc chưa bắt đầu',
+        message: 'Chiến dịch của coupon đã kết thúc hoặc bị tạm dừng',
       };
     }
 
@@ -238,10 +240,11 @@ export class CouponsService {
     }
     if (
       coupon.campaign &&
-      !this.campaignsService.isWithinPeriod(coupon.campaign)
+      (!coupon.campaign.isActive ||
+        !this.campaignsService.isWithinPeriod(coupon.campaign))
     ) {
       throw new BadRequestException(
-        'Chiến dịch của coupon đã kết thúc hoặc chưa bắt đầu',
+        'Chiến dịch của coupon đã kết thúc hoặc bị tạm dừng',
       );
     }
 

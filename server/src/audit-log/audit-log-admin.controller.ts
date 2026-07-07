@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service.js';
-import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { AuditLogQueryDto } from './dto/audit-log-query.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
@@ -22,7 +22,7 @@ export class AuditLogAdminController {
   @Get()
   findAll(
     @Query()
-    query: PaginationDto & { entityType?: string; performedBy?: string },
+    query: AuditLogQueryDto,
     @CurrentUser() user: { id: string; role: Role },
   ) {
     return this.auditLogService.findAll(query, user);

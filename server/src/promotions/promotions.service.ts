@@ -80,7 +80,16 @@ export class PromotionsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { promotionProducts: true } } },
+        include: {
+          campaign: { select: { id: true, name: true, isActive: true } },
+          promotionProducts: {
+            include: {
+              product: { select: { id: true, name: true } },
+              category: { select: { id: true, name: true } },
+              brand: { select: { id: true, name: true } },
+            },
+          },
+        },
       }),
       this.prisma.promotion.count({ where }),
     ]);
@@ -281,7 +290,8 @@ export class PromotionsService {
     const valid = candidates.filter(
       (c) =>
         !c.promotion.campaign ||
-        this.campaignsService.isWithinPeriod(c.promotion.campaign),
+        (c.promotion.campaign.isActive &&
+          this.campaignsService.isWithinPeriod(c.promotion.campaign)),
     );
 
     for (const product of products) {
@@ -327,6 +337,75 @@ export class PromotionsService {
 
     const salePrice = Math.max(price - (price * discountPercent) / 100, 0);
     return { price, salePrice, appliedPromotionId: null };
+  }
+
+  async resolvePromotionsAndCampaignsForProducts(
+    products: ProductScopeInput[],
+  ): Promise<Map<string, { discountPercent: number; campaign: any }>> {
+    const result = new Map<string, { discountPercent: number; campaign: any }>();
+    if (products.length === 0) return result;
+
+    const productIds = products.map((p) => p.id);
+    const categoryIds = [...new Set(products.map((p) => p.categoryId))];
+    const brandIds = [
+      ...new Set(products.map((p) => p.brandId).filter(Boolean) as string[]),
+    ];
+    const now = new Date();
+
+    const candidates = await this.prisma.promotionProduct.findMany({
+      where: {
+        OR: [
+          { productId: { in: productIds } },
+          { categoryId: { in: categoryIds } },
+          ...(brandIds.length ? [{ brandId: { in: brandIds } }] : []),
+        ],
+        promotion: {
+          isActive: true,
+          OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
+        },
+      },
+      include: { promotion: { include: { campaign: true } } },
+    });
+
+    const valid = candidates.filter(
+      (c) =>
+        !c.promotion.campaign ||
+        (c.promotion.campaign.isActive &&
+          this.campaignsService.isWithinPeriod(c.promotion.campaign)),
+    );
+
+    for (const product of products) {
+      const applicable = valid.filter(
+        (c) =>
+          c.productId === product.id ||
+          c.categoryId === product.categoryId ||
+          (product.brandId && c.brandId === product.brandId),
+      );
+      if (applicable.length === 0) {
+        result.set(product.id, { discountPercent: 0, campaign: null });
+        continue;
+      }
+
+      const winner = applicable.sort((a, b) => {
+        const rankDiff = SCOPE_RANK[b.scope] - SCOPE_RANK[a.scope];
+        if (rankDiff !== 0) return rankDiff;
+        return b.promotion.priority - a.promotion.priority;
+      })[0];
+
+      result.set(product.id, {
+        discountPercent: toNumber(winner.discountValue),
+        campaign: winner.promotion.campaign
+          ? {
+              id: winner.promotion.campaign.id,
+              name: winner.promotion.campaign.name,
+              description: winner.promotion.campaign.description,
+            }
+          : null,
+      });
+    }
+
+    return result;
   }
 
   calculateSalePrice(

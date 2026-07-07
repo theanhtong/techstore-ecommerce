@@ -33,7 +33,7 @@ export class OrdersService {
     private readonly notificationsService: NotificationsService,
     @Inject(SHIPPING_PROVIDER)
     private readonly shippingProvider: IShippingProvider,
-  ) {}
+  ) { }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     const address = await this.prisma.address.findUnique({
@@ -367,6 +367,7 @@ export class OrdersService {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, email: true } },
+          payment: { select: { method: true, status: true } },
           items: true,
           shipment: {
             include: { trackingHistory: { orderBy: { createdAt: 'asc' } } },
@@ -377,6 +378,23 @@ export class OrdersService {
     ]);
 
     return buildPaginated(data, total, query.page, query.limit);
+  }
+
+  async findOne(orderId: string) {
+    return this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: true,
+        payment: true,
+        coupon: {
+          select: { code: true, discountType: true, discountValue: true },
+        },
+        shipment: {
+          include: { trackingHistory: { orderBy: { createdAt: 'asc' } } },
+        },
+      },
+    });
   }
 
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto) {

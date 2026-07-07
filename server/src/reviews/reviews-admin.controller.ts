@@ -37,7 +37,7 @@ export class ReviewsAdminController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STAFF)
   @Post(':id/replies')
   createReply(
     @CurrentUser() user: { id: string },

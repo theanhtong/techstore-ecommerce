@@ -1,7 +1,7 @@
 import { AuditAction, Role } from '../generated/prisma/enums.js';
 
 import { Injectable } from '@nestjs/common';
-import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { AuditLogQueryDto } from './dto/audit-log-query.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
 import { uuidv7 } from 'uuidv7';
@@ -94,7 +94,7 @@ export class AuditLogService {
   }
 
   async findAll(
-    query: PaginationDto & { entityType?: string; performedBy?: string },
+    query: AuditLogQueryDto,
     currentUser: { id: string; role: Role },
   ) {
     const performedBy =
