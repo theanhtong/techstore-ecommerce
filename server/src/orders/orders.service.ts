@@ -145,6 +145,48 @@ export class OrdersService {
           FOR UPDATE
         `;
 
+        // Đối chiếu lại giá và khuyến mãi hiện tại trong database để tránh lỗi thay đổi giá trong lúc chờ gọi API GHN
+        const txCartItems = await tx.cartItem.findMany({
+          where: { id: { in: dto.cartItemIds } },
+          include: {
+            variant: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    categoryId: true,
+                    brandId: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const txDiscountMap = await this.promotionsService.resolveDiscountPercentForProducts(
+          txCartItems.map((i) => ({
+            id: i.variant.product.id,
+            categoryId: i.variant.product.categoryId,
+            brandId: i.variant.product.brandId,
+          })),
+        );
+
+        const txSubtotal = txCartItems.reduce((sum, item) => {
+          const price = toNumber(item.variant.price);
+          const discountPercent = txDiscountMap.get(item.variant.product.id);
+          const unitPrice =
+            discountPercent !== undefined
+              ? Math.max(price - (price * discountPercent) / 100, 0)
+              : price;
+          return sum + unitPrice * item.quantity;
+        }, 0);
+
+        if (Math.abs(txSubtotal - subtotal) > 0.01) {
+          throw new BadRequestException(
+            'Giá sản phẩm hoặc chương trình khuyến mãi đã thay đổi. Vui lòng tải lại giỏ hàng và thanh toán lại.',
+          );
+        }
+
         const inventories = await tx.inventory.findMany({
           where: { variantId: { in: variantIds } },
         });

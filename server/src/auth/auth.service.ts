@@ -24,13 +24,63 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto): Promise<{ message: string }> {
+    const threshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    await this.prisma.user.deleteMany({
+      where: {
+        emailVerifiedAt: null,
+        createdAt: { lt: threshold },
+      },
+    });
+
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existing) throw new ConflictException('Email already exists');
+
+    if (existing) {
+      if (existing.emailVerifiedAt) {
+        throw new ConflictException('Email already exists');
+      }
+      const lastVerification = await this.prisma.emailVerification.findFirst({
+        where: { userId: existing.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
+        throw new BadRequestException('Vui lòng đợi ít nhất 60 giây giữa các lần đăng ký/gửi mã.');
+      }
+
+      const hashed = await bcrypt.hash(dto.password, 10);
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          password: hashed,
+          name: dto.name,
+        },
+      });
+
+      await this.prisma.emailVerification.deleteMany({
+        where: { userId: existing.id },
+      });
+
+      const token = randomBytes(32).toString('hex');
+      await this.prisma.emailVerification.create({
+        data: {
+          id: uuidv7(),
+          userId: existing.id,
+          token,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+        },
+      });
+
+      await this.mailService.sendVerificationEmail(existing.email, dto.name, token);
+
+      return {
+        message: 'Mã xác thực mới đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.',
+      };
+    }
 
     const hashed = await bcrypt.hash(dto.password, 10);
 
@@ -67,18 +117,65 @@ export class AuthService {
       where: { token },
     });
 
-    if (!record) throw new NotFoundException('Invalid verification token');
+    if (!record) throw new NotFoundException('Mã xác thực không hợp lệ hoặc đã hết hạn.');
     if (record.expiresAt < new Date())
-      throw new BadRequestException('Token expired');
+      throw new BadRequestException('Mã xác thực đã hết hạn.');
 
     await this.prisma.user.update({
       where: { id: record.userId },
       data: { emailVerifiedAt: new Date() },
     });
 
-    await this.prisma.emailVerification.delete({ where: { token } });
+    try {
+      await this.prisma.emailVerification.delete({ where: { token } });
+    } catch (err: any) {
+      if (err.code !== 'P2025') {
+        throw err;
+      }
+    }
 
-    return { message: 'Email verified successfully. You can now login.' };
+    return { message: 'Xác thực email thành công. Bạn đã có thể đăng nhập.' };
+  }
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Thực hành bảo mật: không tiết lộ sự tồn tại của email
+    if (!user) {
+      return { message: 'Nếu email tồn tại và chưa được xác thực, hệ thống đã gửi liên kết mới.' };
+    }
+    if (user.emailVerifiedAt) {
+      throw new BadRequestException('Email đã được xác thực trước đó.');
+    }
+
+    const lastVerification = await this.prisma.emailVerification.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
+      throw new BadRequestException('Vui lòng đợi ít nhất 60 giây giữa các lần yêu cầu gửi lại email.');
+    }
+
+    await this.prisma.emailVerification.deleteMany({
+      where: { userId: user.id },
+    });
+
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.emailVerification.create({
+      data: {
+        id: uuidv7(),
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+      },
+    });
+
+    await this.mailService.sendVerificationEmail(user.email, user.name, token);
+
+    return { message: 'Mã xác thực mới đã được gửi tới email của bạn.' };
   }
 
   async login(

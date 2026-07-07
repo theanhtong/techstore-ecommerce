@@ -83,62 +83,72 @@ export class PaymentsService {
     return { payment, paymentUrl: result.paymentUrl ?? null };
   }
 
-  // VNPAY IPN - server to server (đáng tin cậy hơn return)
   async handleVnpayIpn(query: Record<string, string>) {
     const result = await this.vnpayProvider.verifyCallback(query);
 
-    const payment = await this.prisma.payment.findUnique({
-      where: { orderId: result.orderId },
-      include: { order: true },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const lockedPayments = await tx.$queryRaw<any[]>`
+        SELECT id, status, "orderId" FROM payments
+        WHERE "orderId" = ${result.orderId}
+        FOR UPDATE
+      `;
 
-    if (!payment) return { RspCode: '01', Message: 'Payment not found' };
-    if (payment.status !== PaymentStatus.PENDING) {
-      return { RspCode: '02', Message: 'Payment already processed' };
-    }
+      if (lockedPayments.length === 0) {
+        return { RspCode: '01', Message: 'Payment not found' };
+      }
 
-    if (result.isSuccess) {
-      if (payment.order.status === OrderStatus.CANCELLED) {
-        await this.prisma.$transaction([
-          this.prisma.payment.update({
-            where: { id: payment.id },
+      const lockedPayment = lockedPayments[0];
+      if (lockedPayment.status !== PaymentStatus.PENDING) {
+        return { RspCode: '02', Message: 'Payment already processed' };
+      }
+
+      const order = await tx.order.findUnique({
+        where: { id: lockedPayment.orderId },
+      });
+
+      if (!order) {
+        return { RspCode: '01', Message: 'Order not found' };
+      }
+
+      if (result.isSuccess) {
+        if (order.status === OrderStatus.CANCELLED) {
+          await tx.payment.update({
+            where: { id: lockedPayment.id },
             data: {
               status: PaymentStatus.REFUNDED,
               transactionId: result.transactionId,
               paidAt: new Date(),
             },
-          }),
-          this.prisma.order.update({
-            where: { id: payment.orderId },
+          });
+          await tx.order.update({
+            where: { id: lockedPayment.orderId },
             data: { paymentStatus: PaymentStatus.REFUNDED },
-          }),
-        ]);
-        return { RspCode: '00', Message: 'Order already cancelled, marked as refunded' };
-      }
+          });
+          return { RspCode: '00', Message: 'Order already cancelled, marked as refunded' };
+        }
 
-      await this.prisma.$transaction([
-        this.prisma.payment.update({
-          where: { id: payment.id },
+        await tx.payment.update({
+          where: { id: lockedPayment.id },
           data: {
             status: PaymentStatus.PAID,
             transactionId: result.transactionId,
             paidAt: new Date(),
           },
-        }),
-        this.prisma.order.update({
-          where: { id: payment.orderId },
+        });
+        await tx.order.update({
+          where: { id: lockedPayment.orderId },
           data: { paymentStatus: PaymentStatus.PAID },
-        }),
-      ]);
-      return { RspCode: '00', Message: 'Success' };
-    }
+        });
+        return { RspCode: '00', Message: 'Success' };
+      }
 
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: PaymentStatus.FAILED },
+      await tx.payment.update({
+        where: { id: lockedPayment.id },
+        data: { status: PaymentStatus.FAILED },
+      });
+
+      return { RspCode: '00', Message: 'Confirmed failure' };
     });
-
-    return { RspCode: '00', Message: 'Confirmed failure' };
   }
 
   // VNPAY return - chỉ để redirect UI, không update DB
