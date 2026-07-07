@@ -340,7 +340,7 @@ export class OrdersService {
     return order;
   }
 
-  async cancelOrder(userId: string, orderId: string) {
+  async cancelOrder(userId: string, orderId: string, reason?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -386,7 +386,7 @@ export class OrdersService {
 
         return tx.order.update({
           where: { id: orderId },
-          data: { status: OrderStatus.CANCELLED },
+          data: { status: OrderStatus.CANCELLED, cancelReason: reason },
         });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
@@ -499,7 +499,10 @@ export class OrdersService {
 
         return tx.order.update({
           where: { id: orderId },
-          data: { status: dto.status },
+          data: {
+            status: dto.status,
+            ...(dto.status === OrderStatus.CANCELLED && { cancelReason: dto.cancelReason }),
+          },
         });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
