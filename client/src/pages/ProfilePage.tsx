@@ -38,6 +38,13 @@ export default function ProfilePage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+
+  // Phone number OTP verification states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+
   const [newAddress, setNewAddress] = useState({
     fullName: "",
     phone: "",
@@ -119,11 +126,42 @@ export default function ProfilePage() {
 
   const handleCreateAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newAddress.phone) {
+      alert("Vui lòng điền số điện thoại.");
+      return;
+    }
     setAddressLoading(true);
     try {
+      // Send OTP to phone
+      await client.post("/address/otp/send", { phone: newAddress.phone });
+      setOtpError(null);
+      setShowOtpModal(true);
+    } catch (err: any) {
+      console.error("Lỗi gửi OTP", err);
+      alert(err.response?.data?.message || "Không thể gửi mã OTP xác thực.");
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const handleVerifyOtpAndSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      // 1. Verify OTP
+      await client.post("/address/otp/verify", {
+        phone: newAddress.phone,
+        code: otpCode,
+      });
+
+      // 2. Proceed with address creation since verification was successful
+      setAddressLoading(true);
       const res = await client.post("/users/me/addresses", newAddress);
       setAddresses([...addresses, res.data]);
       setShowAddForm(false);
+      setShowOtpModal(false);
+      setOtpCode("");
       // Reset form
       setNewAddress({
         fullName: "",
@@ -137,8 +175,10 @@ export default function ProfilePage() {
         wardCode: "20109",
       });
     } catch (err: any) {
-      alert(err.response?.data?.message || "Tạo địa chỉ thất bại.");
+      console.error("Lỗi xác thực OTP hoặc lưu địa chỉ", err);
+      setOtpError(err.response?.data?.message || "Mã OTP không chính xác hoặc đã hết hạn.");
     } finally {
+      setOtpLoading(false);
       setAddressLoading(false);
     }
   };
@@ -467,6 +507,59 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-xl">
+            <div className="text-center space-y-1.5">
+              <h3 className="text-sm font-black text-ink uppercase tracking-wider">Xác thực số điện thoại</h3>
+              <p className="text-xs text-ink/50 font-medium">
+                TechStore đã gửi một mã OTP gồm 6 chữ số để xác minh số điện thoại <strong>{newAddress.phone}</strong>.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtpAndSave} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-widest text-center">Mã OTP</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  placeholder="Nhập mã OTP..."
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  className="w-full text-center tracking-[12px] font-mono text-xl font-bold bg-white border border-gray-300 rounded-md py-3.5 outline-none focus:border-ink"
+                />
+              </div>
+
+              {otpError && (
+                <p className="text-xs text-hazard font-semibold text-center">{otpError}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpModal(false);
+                    setOtpCode("");
+                    setOtpError(null);
+                  }}
+                  className="flex-1 border border-gray-200 hover:bg-gray-50 text-ink text-xs font-bold py-3.5 rounded-md transition-colors cursor-pointer text-center uppercase"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={otpLoading || otpCode.length < 6}
+                  className="flex-1 bg-ink text-substrate hover:bg-hazard hover:text-substrate text-xs font-bold py-3.5 rounded-md transition-colors disabled:bg-gray-100 disabled:text-ink/30 disabled:cursor-not-allowed uppercase"
+                >
+                  {otpLoading ? "..." : "Xác nhận"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

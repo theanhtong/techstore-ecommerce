@@ -79,7 +79,7 @@ export class AuditLogService {
         const user = users.find((u) => u.id === g.performedBy);
         return {
           id: g.performedBy,
-          name: user?.name ?? 'Người dùng không xác định',
+          name: user?.name ?? 'Unknown User',
           email: user?.email ?? '-',
           role: user?.role ?? null,
           totalActions: g._count._all,

@@ -183,7 +183,7 @@ export class OrdersService {
 
         if (Math.abs(txSubtotal - subtotal) > 0.01) {
           throw new BadRequestException(
-            'Giá sản phẩm hoặc chương trình khuyến mãi đã thay đổi. Vui lòng tải lại giỏ hàng và thanh toán lại.',
+            'Product price or promotion has changed. Please reload your cart and try again.',
           );
         }
 
@@ -291,7 +291,7 @@ export class OrdersService {
             userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber} đã được tạo`,
+            body: `Order #${order.orderNumber} has been created`,
           });
         }
 
@@ -380,7 +380,7 @@ export class OrdersService {
             userId: order.userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber} đã được hủy`,
+            body: `Order #${order.orderNumber} has been cancelled`,
           });
         }
 
@@ -493,7 +493,7 @@ export class OrdersService {
             userId: order.userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber}`,
+            body: `Order #${order.orderNumber}`,
           });
         }
 

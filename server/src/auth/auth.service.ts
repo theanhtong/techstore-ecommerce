@@ -49,7 +49,7 @@ export class AuthService {
       });
 
       if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
-        throw new BadRequestException('Vui lòng đợi ít nhất 60 giây giữa các lần đăng ký/gửi mã.');
+        throw new BadRequestException('Please wait at least 60 seconds between registration/verification code requests.');
       }
 
       const hashed = await bcrypt.hash(dto.password, 10);
@@ -78,7 +78,7 @@ export class AuthService {
       await this.mailService.sendVerificationEmail(existing.email, dto.name, token);
 
       return {
-        message: 'Mã xác thực mới đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.',
+        message: 'A new verification code has been sent to your email. Please check your inbox.',
       };
     }
 
@@ -117,9 +117,9 @@ export class AuthService {
       where: { token },
     });
 
-    if (!record) throw new NotFoundException('Mã xác thực không hợp lệ hoặc đã hết hạn.');
+    if (!record) throw new NotFoundException('Invalid or expired verification token.');
     if (record.expiresAt < new Date())
-      throw new BadRequestException('Mã xác thực đã hết hạn.');
+      throw new BadRequestException('Verification token has expired.');
 
     await this.prisma.user.update({
       where: { id: record.userId },
@@ -134,7 +134,7 @@ export class AuthService {
       }
     }
 
-    return { message: 'Xác thực email thành công. Bạn đã có thể đăng nhập.' };
+    return { message: 'Email verified successfully. You can now log in.' };
   }
 
   async resendVerification(email: string): Promise<{ message: string }> {
@@ -144,10 +144,10 @@ export class AuthService {
 
     // Thực hành bảo mật: không tiết lộ sự tồn tại của email
     if (!user) {
-      return { message: 'Nếu email tồn tại và chưa được xác thực, hệ thống đã gửi liên kết mới.' };
+      return { message: 'If the email exists and is not verified, a new link has been sent.' };
     }
     if (user.emailVerifiedAt) {
-      throw new BadRequestException('Email đã được xác thực trước đó.');
+      throw new BadRequestException('Email is already verified.');
     }
 
     const lastVerification = await this.prisma.emailVerification.findFirst({
@@ -156,7 +156,7 @@ export class AuthService {
     });
 
     if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
-      throw new BadRequestException('Vui lòng đợi ít nhất 60 giây giữa các lần yêu cầu gửi lại email.');
+      throw new BadRequestException('Please wait at least 60 seconds between resend email requests.');
     }
 
     await this.prisma.emailVerification.deleteMany({
@@ -175,7 +175,7 @@ export class AuthService {
 
     await this.mailService.sendVerificationEmail(user.email, user.name, token);
 
-    return { message: 'Mã xác thực mới đã được gửi tới email của bạn.' };
+    return { message: 'A new verification link has been sent to your email.' };
   }
 
   async login(

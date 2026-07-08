@@ -19,7 +19,7 @@ import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -88,6 +88,24 @@ export class UsersService {
   }
 
   async createAddress(userId: string, dto: CreateAddressDto) {
+    const verification = await this.prisma.phoneVerification.findFirst({
+      where: {
+        phone: dto.phone,
+        verified: true,
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (!verification) {
+      throw new BadRequestException(
+        'Phone number has not been verified with OTP. Please verify before saving the address.',
+      );
+    }
+
+    await this.prisma.phoneVerification.delete({
+      where: { phone: dto.phone },
+    });
+
     if (dto.isDefault) {
       await this.resetDefaultAddress(userId);
     }

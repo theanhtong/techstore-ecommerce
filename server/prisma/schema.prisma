@@ -625,3 +625,15 @@ model AuditLog {
   @@map("audit_logs")
   @@index([performedBy])
 }
+
+model PhoneVerification {
+  id        String   @id @db.Uuid
+  phone     String   @unique
+  code      String
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("phone_verifications")
+}

@@ -4,13 +4,13 @@ import { useCartStore } from "../store/useCartStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { client } from "../api/client";
 import { formatPrice } from "../utils/price";
-import { 
-  MapPin, 
-  CreditCard, 
-  ArrowLeft, 
-  Truck, 
-  Plus, 
-  CheckCircle2 
+import {
+  MapPin,
+  CreditCard,
+  ArrowLeft,
+  Truck,
+  Plus,
+  CheckCircle2
 } from "lucide-react";
 
 interface Address {
@@ -26,10 +26,13 @@ interface Address {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const { items, clearCart } = useCartStore();
+  const { items, clearCart, fetchCart, loading } = useCartStore();
   const [checkoutItemIds, setCheckoutItemIds] = useState<string[]>([]);
+  const [hasValidated, setHasValidated] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
+    fetchCart();
     const saved = localStorage.getItem("checkout_item_ids");
     if (saved) {
       try {
@@ -38,7 +41,26 @@ export default function CheckoutPage() {
         console.error("Error parsing checkout items", err);
       }
     }
-  }, []);
+  }, [fetchCart]);
+
+  useEffect(() => {
+    if (loading || isSubmitted) return;
+
+    if (checkoutItemIds.length > 0) {
+      const validCheckoutItems = items.filter((i) => checkoutItemIds.includes(i.id));
+      if (validCheckoutItems.length !== checkoutItemIds.length) {
+        alert("Sản phẩm trong giỏ hàng đã thay đổi. Vui lòng kiểm tra lại đơn hàng.");
+        navigate("/cart");
+      } else {
+        setHasValidated(true);
+      }
+    } else if (items.length > 0) {
+      setHasValidated(true);
+    } else {
+      // If cart is empty, redirect to /cart
+      navigate("/cart");
+    }
+  }, [items, checkoutItemIds, loading, isSubmitted, navigate]);
 
   const checkoutItems = checkoutItemIds.length > 0
     ? items.filter((i) => checkoutItemIds.includes(i.id))
@@ -53,6 +75,12 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+
+  // Phone number OTP verification states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   // Pre-populated default shipping address details matching Vietnamese GHN system coordinates
   const [newAddress, setNewAddress] = useState({
@@ -102,7 +130,7 @@ export default function CheckoutPage() {
       return;
     }
     fetchAddresses();
-    
+
     // Check for applied coupon from cart page
     const savedCoupon = localStorage.getItem("applied_coupon");
     if (savedCoupon) {
@@ -132,16 +160,48 @@ export default function CheckoutPage() {
 
   const handleCreateAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newAddress.phone) {
+      alert("Vui lòng điền số điện thoại.");
+      return;
+    }
     setAddressLoading(true);
     try {
+      // Send OTP to user's phone number via API
+      await client.post("/address/otp/send", { phone: newAddress.phone });
+      setOtpError(null);
+      setShowOtpModal(true);
+    } catch (err: any) {
+      console.error("Lỗi gửi mã OTP", err);
+      alert(err.response?.data?.message || "Không thể gửi mã OTP xác thực.");
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const handleVerifyOtpAndSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      // 1. Verify OTP
+      await client.post("/address/otp/verify", {
+        phone: newAddress.phone,
+        code: otpCode,
+      });
+
+      // 2. Proceed with address creation since verification was successful
+      setAddressLoading(true);
       const res = await client.post("/users/me/addresses", newAddress);
       setAddresses([...addresses, res.data]);
       setSelectedAddressId(res.data.id);
       setShowAddressForm(false);
+      setShowOtpModal(false);
+      setOtpCode("");
     } catch (err: any) {
-      console.error("Lỗi thêm địa chỉ mới", err);
-      alert(err.response?.data?.message || "Không thể tạo địa chỉ mới.");
+      console.error("Lỗi xác thực OTP hoặc lưu địa chỉ", err);
+      setOtpError(err.response?.data?.message || "Mã OTP không chính xác hoặc đã hết hạn.");
     } finally {
+      setOtpLoading(false);
       setAddressLoading(false);
     }
   };
@@ -154,6 +214,7 @@ export default function CheckoutPage() {
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
+      setIsSubmitted(true);
       // 1. Create order on backend
       const orderRes = await client.post("/orders", {
         cartItemIds: checkoutItems.map((i) => i.id),
@@ -180,6 +241,7 @@ export default function CheckoutPage() {
         navigate("/orders");
       }
     } catch (err: any) {
+      setIsSubmitted(false);
       setCheckoutError(err.response?.data?.message || "Đặt hàng thất bại. Vui lòng kiểm tra và thử lại.");
     } finally {
       setCheckoutLoading(false);
@@ -188,6 +250,15 @@ export default function CheckoutPage() {
 
   const discountAmount = couponResult ? couponResult.discountAmount : 0;
   const finalAmount = couponResult ? Math.max(checkoutSubtotal - discountAmount, 0) : checkoutSubtotal;
+
+  if (loading || !hasValidated) {
+    return (
+      <div className="py-24 text-center font-medium text-ink/60 flex flex-col items-center justify-center gap-3">
+        <span className="animate-spin rounded-full h-6 w-6 border-2 border-ink border-t-transparent"></span>
+        <span className="text-xs uppercase tracking-wider font-bold">Đang tải và xác thực đơn hàng...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -366,9 +437,8 @@ export default function CheckoutPage() {
                 {addresses.map((a) => (
                   <label
                     key={a.id}
-                    className={`block border p-4 rounded-lg cursor-pointer relative transition-colors ${
-                      selectedAddressId === a.id ? "bg-gray-50/50 border-ink shadow-sm" : "border-gray-200 hover:border-gray-300"
-                    }`}
+                    className={`block border p-4 rounded-lg cursor-pointer relative transition-colors ${selectedAddressId === a.id ? "bg-gray-50/50 border-ink shadow-sm" : "border-gray-200 hover:border-gray-300"
+                      }`}
                   >
                     <input
                       type="radio"
@@ -397,11 +467,10 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod("COD")}
-                className={`border p-4 rounded-lg text-xs font-semibold cursor-pointer text-left transition-colors flex justify-between items-center ${
-                  paymentMethod === "COD"
+                className={`border p-4 rounded-lg text-xs font-semibold cursor-pointer text-left transition-colors flex justify-between items-center ${paymentMethod === "COD"
                     ? "border-ink bg-gray-50"
                     : "border-gray-200 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <div>
                   <div className="font-bold text-ink">Thanh toán khi nhận hàng (COD)</div>
@@ -412,11 +481,10 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod("VNPAY")}
-                className={`border p-4 rounded-lg text-xs font-semibold cursor-pointer text-left transition-colors flex justify-between items-center ${
-                  paymentMethod === "VNPAY"
+                className={`border p-4 rounded-lg text-xs font-semibold cursor-pointer text-left transition-colors flex justify-between items-center ${paymentMethod === "VNPAY"
                     ? "border-ink bg-gray-50"
                     : "border-gray-200 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <div>
                   <div className="font-bold text-ink">Thanh toán qua VNPAY Online</div>
@@ -509,6 +577,59 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-xl">
+            <div className="text-center space-y-1.5">
+              <h3 className="text-sm font-black text-ink uppercase tracking-wider">Xác thực số điện thoại</h3>
+              <p className="text-xs text-ink/50 font-medium">
+                TechStore đã gửi một mã OTP gồm 6 chữ số để xác minh số điện thoại <strong>{newAddress.phone}</strong>.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtpAndSave} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-widest text-center">Mã OTP</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  placeholder="Nhập mã OTP..."
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  className="w-full text-center tracking-[12px] font-mono text-xl font-bold bg-white border border-gray-300 rounded-md py-3.5 outline-none focus:border-ink"
+                />
+              </div>
+
+              {otpError && (
+                <p className="text-xs text-hazard font-semibold text-center">{otpError}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpModal(false);
+                    setOtpCode("");
+                    setOtpError(null);
+                  }}
+                  className="flex-1 border border-gray-200 hover:bg-gray-50 text-ink text-xs font-bold py-3.5 rounded-md transition-colors cursor-pointer text-center uppercase"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={otpLoading || otpCode.length < 6}
+                  className="flex-1 bg-ink text-substrate hover:bg-hazard hover:text-substrate text-xs font-bold py-3.5 rounded-md transition-colors disabled:bg-gray-100 disabled:text-ink/30 disabled:cursor-not-allowed uppercase"
+                >
+                  {otpLoading ? "..." : "Xác nhận"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

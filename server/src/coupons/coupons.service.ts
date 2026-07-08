@@ -167,7 +167,7 @@ export class CouponsService {
       return { isValid: false, message: 'Coupon is inactive' };
 
     if (coupon.startsAt && coupon.startsAt > new Date()) {
-      return { isValid: false, message: 'Coupon chưa đến thời gian áp dụng' };
+      return { isValid: false, message: 'Coupon is not active yet' };
     }
     if (coupon.endsAt && coupon.endsAt < new Date()) {
       return { isValid: false, message: 'Coupon has expired' };
@@ -179,7 +179,7 @@ export class CouponsService {
     ) {
       return {
         isValid: false,
-        message: 'Chiến dịch của coupon đã kết thúc hoặc bị tạm dừng',
+        message: 'The coupon campaign has ended or is paused',
       };
     }
 
@@ -233,7 +233,7 @@ export class CouponsService {
     if (!coupon.isActive) throw new BadRequestException('Coupon is inactive');
 
     if (coupon.startsAt && coupon.startsAt > new Date()) {
-      throw new BadRequestException('Coupon chưa đến thời gian áp dụng');
+      throw new BadRequestException('Coupon is not active yet');
     }
     if (coupon.endsAt && coupon.endsAt < new Date()) {
       throw new BadRequestException('Coupon has expired');
@@ -244,7 +244,7 @@ export class CouponsService {
         !this.campaignsService.isWithinPeriod(coupon.campaign))
     ) {
       throw new BadRequestException(
-        'Chiến dịch của coupon đã kết thúc hoặc bị tạm dừng',
+        'The coupon campaign has ended or is paused',
       );
     }
 

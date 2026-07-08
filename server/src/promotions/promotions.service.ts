@@ -176,7 +176,7 @@ export class PromotionsService {
     ).length;
     if (scopeCount !== 1) {
       throw new BadRequestException(
-        'Phải chọn đúng 1 trong 3: productId, categoryId, hoặc brandId',
+        'Must select exactly one of: productId, categoryId, or brandId',
       );
     }
 

@@ -179,7 +179,7 @@ export class ShipmentsService {
               userId: shipment.order.userId,
               type: notif.type,
               title: notif.title,
-              body: `Đơn hàng #${shipment.order.orderNumber}`,
+              body: `Order #${shipment.order.orderNumber}`,
             },
           });
         }
@@ -221,7 +221,7 @@ export class ShipmentsService {
               userId: shipment.order.userId,
               type: notif.type,
               title: notif.title,
-              body: `Đơn hàng #${shipment.order.orderNumber} đã được hủy`,
+              body: `Order #${shipment.order.orderNumber} has been cancelled`,
             },
           });
         }
