@@ -21,12 +21,24 @@ import { ReviewsModule } from './reviews/reviews.module.js';
 import { ShipmentsModule } from './shipments/shipments.module.js';
 import { UsersModule } from './users/users.module.js';
 import { WishlistsModule } from './wishlists/wishlists.module.js';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 20,
+    }]),
     BrandsModule,
     CategoriesModule,
     PrismaModule,
@@ -48,4 +60,4 @@ import { WishlistsModule } from './wishlists/wishlists.module.js';
     CampaignsModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
