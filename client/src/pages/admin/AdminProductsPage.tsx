@@ -77,9 +77,20 @@ export default function AdminProductsPage() {
     setValue("brandId", product.brandId);
   };
 
-  const products = productsData?.data || [];
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterBrand, setFilterBrand] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const rawProducts = productsData?.data || [];
   const categoryList = Array.isArray(categories) ? categories : [];
   const brandList = Array.isArray(brands) ? brands : [];
+
+  const filteredProducts = rawProducts.filter((p: any) => {
+    if (filterCategory && p.categoryId !== filterCategory) return false;
+    if (filterBrand && p.brandId !== filterBrand) return false;
+    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase()) && !p.slug.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -149,11 +160,70 @@ export default function AdminProductsPage() {
         </form>
       )}
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm sản phẩm</label>
+          <input
+            type="text"
+            placeholder="Tìm theo tên hoặc slug..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Danh mục</label>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả danh mục</option>
+            {categoryList.map((c: any) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Thương hiệu</label>
+          <select
+            value={filterBrand}
+            onChange={(e) => setFilterBrand(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả thương hiệu</option>
+            {brandList.map((b: any) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(searchTerm || filterCategory || filterBrand) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setFilterCategory("");
+                setFilterBrand("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Main HTML Table */}
       {isLoading ? (
         <div className="text-center py-8 text-xs text-ink/40 font-medium">Đang tải danh sách sản phẩm...</div>
-      ) : products.length === 0 ? (
-        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không có sản phẩm nào.</div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không tìm thấy sản phẩm nào khớp bộ lọc.</div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl p-5 overflow-x-auto text-xs font-semibold">
           <table className="w-full text-left border-collapse">
@@ -169,7 +239,7 @@ export default function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-ink font-medium">
-              {products.map((p: any) => (
+              {filteredProducts.map((p: any) => (
                 <tr key={p.id} className="hover:bg-gray-50/50">
                   <td className="py-3.5 pr-2 font-mono text-[10px] text-ink/40" title={p.id}>
                     {p.id.slice(0, 8)}...

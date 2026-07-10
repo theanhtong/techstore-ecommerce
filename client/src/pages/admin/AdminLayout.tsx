@@ -15,7 +15,8 @@ import {
   Users,
   ShieldAlert,
   Home,
-  LogOut
+  LogOut,
+  Archive
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -36,6 +37,7 @@ export default function AdminLayout() {
   }
 
   const SIDEBAR_ITEMS = [
+    { to: "/admin", label: "Tổng quan", icon: Sliders },
     { to: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
     { to: "/admin/products", label: "Sản phẩm", icon: Package },
     { to: "/admin/categories", label: "Danh mục", icon: FolderOpen },
@@ -44,8 +46,13 @@ export default function AdminLayout() {
     { to: "/admin/promotions", label: "Khuyến mãi", icon: Tag },
     { to: "/admin/coupons", label: "Mã giảm giá", icon: Ticket },
     { to: "/admin/reviews", label: "Đánh giá", icon: Star },
-    { to: "/admin/users", label: "Người dùng", icon: Users },
-    { to: "/admin/audit-logs", label: "Nhật ký hoạt động", icon: ShieldAlert },
+    ...(user?.role === "ADMIN"
+      ? [
+          { to: "/admin/users", label: "Người dùng", icon: Users },
+          { to: "/admin/audit-logs", label: "Nhật ký hoạt động", icon: ShieldAlert },
+          { to: "/admin/recycle-bin", label: "Thùng rác", icon: Archive },
+        ]
+      : []),
   ];
 
   return (
@@ -82,6 +89,7 @@ export default function AdminLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  end={item.to === "/admin"}
                   className={({ isActive }) =>
                     `w-full flex items-center gap-3 px-3.5 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wider text-left ${isActive
                       ? "bg-ink text-white"

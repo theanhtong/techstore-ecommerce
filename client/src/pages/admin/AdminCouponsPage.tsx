@@ -72,14 +72,14 @@ export default function AdminCouponsPage() {
     setValue("code", item.code);
     setValue("campaignId", item.campaignId || "");
     setValue("discountType", item.discountType);
-    setValue("discountValue", item.discountValue);
-    setValue("minOrderValue", item.minOrderValue || "");
-    setValue("maxDiscount", item.maxDiscount || "");
+    setValue("discountValue", item.discountValue ? String(item.discountValue) : "");
+    setValue("minOrderValue", item.minOrderValue ? String(item.minOrderValue) : "");
+    setValue("maxDiscount", item.maxDiscount ? String(item.maxDiscount) : "");
     setValue("usageLimit", item.usageLimit || "");
     setValue("perUserLimit", item.perUserLimit || "");
     setValue("startsAt", item.startsAt ? item.startsAt.slice(0, 10) : "");
     setValue("endsAt", item.endsAt ? item.endsAt.slice(0, 10) : "");
-    setValue("isActive", item.isActive);
+    setValue("isActive", String(item.isActive));
   };
 
   const coupons = couponsData?.data || couponsData || [];
@@ -112,9 +112,9 @@ export default function AdminCouponsPage() {
               code: data.code,
               campaignId: data.campaignId || undefined,
               discountType: data.discountType,
-              discountValue: data.discountValue,
-              minOrderValue: data.minOrderValue || undefined,
-              maxDiscount: data.maxDiscount || undefined,
+              discountValue: String(data.discountValue),
+              minOrderValue: data.minOrderValue ? String(data.minOrderValue) : undefined,
+              maxDiscount: data.maxDiscount ? String(data.maxDiscount) : undefined,
               usageLimit: data.usageLimit ? Number(data.usageLimit) : undefined,
               perUserLimit: data.perUserLimit ? Number(data.perUserLimit) : undefined,
               startsAt: data.startsAt ? new Date(data.startsAt).toISOString() : undefined,
@@ -138,11 +138,20 @@ export default function AdminCouponsPage() {
               <label className="block text-ink/50 uppercase text-[9px] mb-1">Loại giảm giá</label>
               <select className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("discountType", { required: true })}>
                 <option value="PERCENTAGE">Phần trăm (%)</option>
+                <option value="FIXED_AMOUNT">Số tiền cố định (đ)</option>
               </select>
             </div>
             <div>
               <label className="block text-ink/50 uppercase text-[9px] mb-1">Mức giảm</label>
               <input type="text" required placeholder="E.g., 20.00" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("discountValue", { required: true })} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Giá trị đơn tối thiểu (đ)</label>
+              <input type="text" placeholder="E.g., 500000" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("minOrderValue")} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Giảm tối đa (đ - cho %)</label>
+              <input type="text" placeholder="E.g., 200000" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("maxDiscount")} />
             </div>
             <div>
               <label className="block text-ink/50 uppercase text-[9px] mb-1">Chiến dịch</label>
@@ -154,6 +163,18 @@ export default function AdminCouponsPage() {
             <div>
               <label className="block text-ink/50 uppercase text-[9px] mb-1">Số lượt dùng tối đa</label>
               <input type="number" placeholder="E.g., 100" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("usageLimit")} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Giới hạn mỗi user</label>
+              <input type="number" placeholder="E.g., 1" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("perUserLimit")} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Ngày bắt đầu</label>
+              <input type="date" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("startsAt")} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Ngày kết thúc</label>
+              <input type="date" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...register("endsAt")} />
             </div>
             <div>
               <label className="block text-ink/50 uppercase text-[9px] mb-1">Trạng thái</label>
@@ -192,7 +213,11 @@ export default function AdminCouponsPage() {
               {coupons.map((cp: any) => (
                 <tr key={cp.id} className="hover:bg-gray-50/50">
                   <td className="py-3.5 pr-2 font-mono font-bold text-ink">{cp.code}</td>
-                  <td className="py-3.5 pr-2 font-bold text-hazard">Giảm {cp.discountValue}%</td>
+                  <td className="py-3.5 pr-2 font-bold text-hazard">
+                    {cp.discountType === "PERCENTAGE" 
+                      ? `Giảm ${cp.discountValue}%` 
+                      : `Giảm ${Number(cp.discountValue).toLocaleString()}đ`}
+                  </td>
                   <td className="py-3.5 pr-2">{cp.campaign?.name || "N/A"}</td>
                   <td className="py-3.5 pr-2 font-mono text-ink/65">
                     Giới hạn: {cp.usageLimit || "Không giới hạn"}

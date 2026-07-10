@@ -35,6 +35,8 @@ import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminAuditLogsPage from "./pages/admin/AdminAuditLogsPage";
+import AdminRecycleBinPage from "./pages/admin/AdminRecycleBinPage";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 
 const CustomerLayout = () => {
   const user = useAuthStore((state) => state.user);
@@ -211,7 +213,8 @@ export default function App() {
 
         {/* System Administration Layout */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/admin/orders" replace />} />
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="products/:id" element={<AdminProductDetailPage />} />
@@ -223,6 +226,7 @@ export default function App() {
           <Route path="reviews" element={<AdminReviewsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+          <Route path="recycle-bin" element={<AdminRecycleBinPage />} />
         </Route>
 
         <Route path="*" element={<div className="p-8 text-center text-sm font-semibold text-hazard">Lỗi 404: Không tìm thấy trang yêu cầu</div>} />

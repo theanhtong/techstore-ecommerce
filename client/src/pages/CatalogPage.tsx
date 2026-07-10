@@ -51,7 +51,6 @@ export default function CatalogPage() {
   });
 
   const products: Product[] = data?.data || [];
-  console.log(products);
 
   // Extract unique categories and brands dynamically from loaded products
   const categoriesMap = new Map<string, { id: string; name: string }>();
