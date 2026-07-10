@@ -82,8 +82,19 @@ export default function AdminCouponsPage() {
     setValue("isActive", String(item.isActive));
   };
 
-  const coupons = couponsData?.data || couponsData || [];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState("");
+
+  const rawCoupons = couponsData?.data || couponsData || [];
   const campaignList = Array.isArray(campaigns) ? campaigns : [];
+
+  const filteredCoupons = rawCoupons.filter((cp: any) => {
+    if (statusFilter && String(cp.isActive) !== statusFilter) return false;
+    if (campaignFilter && cp.campaignId !== campaignFilter) return false;
+    if (searchTerm && !cp.code.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6 text-xs font-semibold">
@@ -192,10 +203,66 @@ export default function AdminCouponsPage() {
         </form>
       )}
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm coupon</label>
+          <input
+            type="text"
+            placeholder="Tìm theo mã coupon..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Chiến dịch</label>
+          <select
+            value={campaignFilter}
+            onChange={(e) => setCampaignFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả chiến dịch</option>
+            {campaignList.map((c: any) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Trạng thái hoạt động</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="true">Hoạt động</option>
+            <option value="false">Tạm dừng</option>
+          </select>
+        </div>
+        {(searchTerm || statusFilter || campaignFilter) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("");
+                setCampaignFilter("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-xs text-ink/40 font-medium">Đang tải danh sách...</div>
-      ) : coupons.length === 0 ? (
-        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không có coupon nào.</div>
+      ) : filteredCoupons.length === 0 ? (
+        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không tìm thấy mã giảm giá nào khớp bộ lọc.</div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl p-5 overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -210,7 +277,7 @@ export default function AdminCouponsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-ink font-medium">
-              {coupons.map((cp: any) => (
+              {filteredCoupons.map((cp: any) => (
                 <tr key={cp.id} className="hover:bg-gray-50/50">
                   <td className="py-3.5 pr-2 font-mono font-bold text-ink">{cp.code}</td>
                   <td className="py-3.5 pr-2 font-bold text-hazard">

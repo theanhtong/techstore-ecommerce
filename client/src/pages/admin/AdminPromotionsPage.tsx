@@ -100,8 +100,8 @@ export default function AdminPromotionsPage() {
       return client.post(`/admin/promotions/${promoId}/products`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-promotions"] });
       setShowScopeForm(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-promotions"] });
       resetScopeForm();
     },
     onError: (err: any) => alert(err.response?.data?.message || "Lỗi khi áp dụng khuyến mãi."),
@@ -129,18 +129,27 @@ export default function AdminPromotionsPage() {
     setMainValue("isActive", p.isActive);
   };
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState("");
+
   const promotions = promotionsData?.data || promotionsData || [];
   const campaignList = Array.isArray(campaigns) ? campaigns : [];
   const categoryList = Array.isArray(categories) ? categories : [];
   const brandList = Array.isArray(brands) ? brands : [];
   const productList = Array.isArray(products) ? products : [];
 
+  const filteredPromotions = promotions.filter((p: any) => {
+    if (campaignFilter && p.campaignId !== campaignFilter) return false;
+    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase()) && !(p.description || "").toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-xs font-semibold">
       <div className="flex justify-between items-center">
         <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
           <Tag className="w-5 h-5 text-hazard" />
-          Chương trình khuyến mãi
+          Các chương trình khuyến mãi
         </h3>
         <button
           onClick={() => {
@@ -160,12 +169,8 @@ export default function AdminPromotionsPage() {
         <form
           onSubmit={handleMainSubmit((data) => {
             const payload = {
-              name: data.name,
-              description: data.description || undefined,
-              campaignId: data.campaignId || undefined,
+              ...data,
               priority: Number(data.priority),
-              startsAt: data.startsAt ? new Date(data.startsAt).toISOString() : undefined,
-              endsAt: data.endsAt ? new Date(data.endsAt).toISOString() : undefined,
               isActive: data.isActive === "true" || data.isActive === true,
             };
             if (editingId) {
@@ -176,7 +181,7 @@ export default function AdminPromotionsPage() {
           })}
           className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 text-xs font-semibold shadow-xs"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-ink/50 uppercase text-[10px] mb-1">Tên khuyến mãi</label>
               <input type="text" required placeholder="Khuyến mãi ASUS" className="w-full bg-white border border-gray-300 rounded px-3 py-2" {...regMain("name", { required: true })} />
@@ -221,18 +226,15 @@ export default function AdminPromotionsPage() {
             };
             addScopeMutation.mutate({ promoId: selectedPromotionId, data: payload });
           })}
-          className="border border-emerald-250 bg-emerald-50/50 rounded-xl p-5 space-y-4 text-xs font-semibold shadow-xs"
+          className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 text-xs font-semibold shadow-xs"
         >
-          <h4 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-emerald-100 pb-2">
-            Áp dụng khuyến mãi lên sản phẩm, danh mục hoặc thương hiệu
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-ink/50 uppercase text-[9px] mb-1">Mức giảm (%)</label>
-              <input type="text" required placeholder="E.g., 15.00" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...regScope("discountValue", { required: true })} />
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Mức giảm phần trăm (%)</label>
+              <input type="number" required placeholder="E.g., 10" className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5" {...regScope("discountValue", { required: true })} />
             </div>
             <div>
-              <label className="block text-ink/50 uppercase text-[9px] mb-1">Theo sản phẩm</label>
+              <label className="block text-ink/50 uppercase text-[9px] mb-1">Theo sản phẩm cụ thể</label>
               <select className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 outline-none" {...regScope("productId")}>
                 <option value="">-- Bỏ qua --</option>
                 {productList.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -254,17 +256,60 @@ export default function AdminPromotionsPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowScopeForm(false)} className="bg-white border border-gray-250 hover:border-ink px-3 py-1.5 rounded text-xs font-bold cursor-pointer transition-colors">Hủy</button>
+            <button type="button" onClick={() => setShowScopeForm(false)} className="bg-white border border-gray-255 hover:border-ink px-3 py-1.5 rounded text-xs font-bold cursor-pointer transition-colors">Hủy</button>
             <button type="submit" className="bg-ink text-white hover:bg-hazard px-3 py-1.5 rounded text-xs font-bold cursor-pointer transition-colors">Xác nhận áp dụng</button>
           </div>
         </form>
       )}
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm khuyến mãi</label>
+          <input
+            type="text"
+            placeholder="Tìm theo tên khuyến mãi..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Chiến dịch</label>
+          <select
+            value={campaignFilter}
+            onChange={(e) => setCampaignFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả chiến dịch</option>
+            {campaignList.map((c: any) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(searchTerm || campaignFilter) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setCampaignFilter("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Main Table view */}
       {isLoading ? (
         <div className="text-center py-8 text-xs text-ink/40 font-medium">Đang tải danh sách...</div>
-      ) : promotions.length === 0 ? (
-        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không có chương trình khuyến mãi nào.</div>
+      ) : filteredPromotions.length === 0 ? (
+        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không tìm thấy khuyến mãi nào khớp bộ lọc.</div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl p-5 overflow-x-auto text-xs font-semibold">
           <table className="w-full text-left border-collapse">
@@ -279,7 +324,7 @@ export default function AdminPromotionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-ink font-medium">
-              {promotions.map((p: any) => (
+              {filteredPromotions.map((p: any) => (
                 <tr key={p.id} className="hover:bg-gray-50/50 align-top">
                   <td className="py-4 pr-2 font-bold">{p.name}</td>
                   <td className="py-4 pr-2">{p.campaign?.name || "N/A"}</td>

@@ -82,7 +82,23 @@ export default function AdminOrdersPage() {
     },
   });
 
-  const orders = ordersData?.data || [];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const rawOrders = ordersData?.data || [];
+
+  const filteredOrders = rawOrders.filter((o: any) => {
+    if (statusFilter && o.status !== statusFilter) return false;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchOrderNumber = o.orderNumber?.toLowerCase().includes(searchLower);
+      const matchUserName = o.user?.name?.toLowerCase().includes(searchLower);
+      const matchUserEmail = o.user?.email?.toLowerCase().includes(searchLower);
+      const matchShippingName = o.shippingSnapshot?.fullName?.toLowerCase().includes(searchLower);
+      if (!matchOrderNumber && !matchUserName && !matchUserEmail && !matchShippingName) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 space-y-6 w-full backend-layout-fix">
@@ -91,10 +107,53 @@ export default function AdminOrdersPage() {
         Tất cả đơn hàng hệ thống
       </h3>
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm đơn hàng</label>
+          <input
+            type="text"
+            placeholder="Tìm theo mã đơn, khách hàng, email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Trạng thái đơn</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ xử lý (PENDING)</option>
+            <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
+            <option value="SHIPPED">Đang giao hàng (SHIPPED)</option>
+            <option value="DELIVERED">Đã giao hàng (DELIVERED)</option>
+            <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+          </select>
+        </div>
+        {(searchTerm || statusFilter) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="text-center py-10 text-xs text-ink/40 font-medium w-full">Đang tải danh sách đơn hàng...</div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-10 text-xs text-ink/40 font-medium w-full">Hệ thống chưa ghi nhận đơn hàng nào.</div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="text-center py-10 text-xs text-ink/40 font-medium w-full">Không tìm thấy đơn hàng nào phù hợp với bộ lọc.</div>
       ) : (
         <div className="w-full text-xs font-semibold">
           <table className="w-full text-left border-collapse table-fixed">
@@ -111,7 +170,7 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-ink font-medium">
-              {orders.map((o: any) => (
+              {filteredOrders.map((o: any) => (
                 <tr key={o.id} className="hover:bg-gray-50/50 align-middle">
                   <td className="py-3 px-3 font-bold font-mono text-ink tracking-tight truncate" title={o.orderNumber}>
                     #{o.orderNumber && o.orderNumber.length > 8 ? `${o.orderNumber.slice(0, 6)}...` : o.orderNumber}
@@ -398,7 +457,7 @@ export default function AdminOrdersPage() {
             <h3 className="text-sm font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2">
               Lý do hủy đơn hàng (Admin)
             </h3>
-            
+
             <div className="space-y-3">
               <div>
                 <label className="block text-[10px] font-bold text-ink/50 uppercase tracking-wider mb-1">

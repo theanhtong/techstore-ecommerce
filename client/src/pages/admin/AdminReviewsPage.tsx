@@ -39,6 +39,9 @@ export default function AdminReviewsPage() {
     onError: (err: any) => alert(err.response?.data?.message || "Lỗi khi phản hồi nhận xét."),
   });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
+
   const allReviews = reviewsData?.data || [];
 
   // Filter logic
@@ -46,6 +49,16 @@ export default function AdminReviewsPage() {
     const hasReplies = r.replies && r.replies.length > 0;
     if (filterTab === "UNREPLIED") return !hasReplies;
     if (filterTab === "REPLIED") return hasReplies;
+    return true;
+  }).filter((r: any) => {
+    if (ratingFilter && r.rating !== Number(ratingFilter)) return false;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchComment = r.comment?.toLowerCase().includes(searchLower);
+      const matchProductName = r.variant?.product?.name?.toLowerCase().includes(searchLower);
+      const matchUserName = r.user?.name?.toLowerCase().includes(searchLower);
+      if (!matchComment && !matchProductName && !matchUserName) return false;
+    }
     return true;
   });
 
@@ -92,11 +105,54 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm đánh giá</label>
+          <input
+            type="text"
+            placeholder="Tìm theo bình luận, tên sản phẩm, khách hàng..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Số sao</label>
+          <select
+            value={ratingFilter}
+            onChange={(e) => setRatingFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả số sao</option>
+            <option value="5">5 sao</option>
+            <option value="4">4 sao</option>
+            <option value="3">3 sao</option>
+            <option value="2">2 sao</option>
+            <option value="1">1 sao</option>
+          </select>
+        </div>
+        {(searchTerm || ratingFilter) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setRatingFilter("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="text-center py-12 text-ink/55">Đang tải danh sách đánh giá...</div>
       ) : filteredReviews.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-ink/40">
-          Không có nhận xét nào phù hợp với bộ lọc hiện tại.
+          Không tìm thấy nhận xét nào phù hợp với bộ lọc.
         </div>
       ) : (
         <div className="space-y-4">

@@ -76,7 +76,16 @@ export default function AdminCampaignsPage() {
     setValue("isActive", c.isActive);
   };
 
-  const campaigns = campaignsData?.data || campaignsData || [];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const rawCampaigns = campaignsData?.data || campaignsData || [];
+
+  const filteredCampaigns = rawCampaigns.filter((c: any) => {
+    if (statusFilter && String(c.isActive) !== statusFilter) return false;
+    if (searchTerm && !c.name.toLowerCase().includes(searchTerm.toLowerCase()) && !(c.description || "").toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -98,14 +107,12 @@ export default function AdminCampaignsPage() {
         </button>
       </div>
 
+      {/* Form inline */}
       {showForm && (
         <form
           onSubmit={handleSubmit((data) => {
             const payload = {
-              name: data.name,
-              description: data.description || undefined,
-              startsAt: data.startsAt ? new Date(data.startsAt).toISOString() : undefined,
-              endsAt: data.endsAt ? new Date(data.endsAt).toISOString() : undefined,
+              ...data,
               isActive: data.isActive === "true" || data.isActive === true,
             };
             if (editingId) {
@@ -116,25 +123,25 @@ export default function AdminCampaignsPage() {
           })}
           className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 text-xs font-semibold shadow-xs"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-ink/50 uppercase text-[10px] mb-1">Tên chiến dịch</label>
-              <input type="text" required placeholder="Sale hè rực rỡ" className="w-full bg-white border border-gray-300 rounded px-3 py-2 outline-none" {...register("name", { required: true })} />
-            </div>
-            <div>
-              <label className="block text-ink/50 uppercase text-[10px] mb-1">Hoạt động</label>
-              <select className="w-full bg-white border border-gray-300 rounded px-3 py-2 outline-none" {...register("isActive")}>
-                <option value="true">Kích hoạt</option>
-                <option value="false">Tạm dừng</option>
-              </select>
+              <input type="text" required placeholder="E.g., Mua sắm mùa hè" className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none" {...register("name", { required: true })} />
             </div>
             <div>
               <label className="block text-ink/50 uppercase text-[10px] mb-1">Ngày bắt đầu</label>
-              <input type="date" className="w-full bg-white border border-gray-300 rounded px-3 py-2 outline-none" {...register("startsAt")} />
+              <input type="date" required className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none" {...register("startsAt", { required: true })} />
             </div>
             <div>
               <label className="block text-ink/50 uppercase text-[10px] mb-1">Ngày kết thúc</label>
-              <input type="date" className="w-full bg-white border border-gray-300 rounded px-3 py-2 outline-none" {...register("endsAt")} />
+              <input type="date" required className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none" {...register("endsAt", { required: true })} />
+            </div>
+            <div>
+              <label className="block text-ink/50 uppercase text-[10px] mb-1">Trạng thái</label>
+              <select className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none" {...register("isActive")}>
+                <option value="true">Hoạt động</option>
+                <option value="false">Tạm dừng</option>
+              </select>
             </div>
             <div className="md:col-span-2">
               <label className="block text-ink/50 uppercase text-[10px] mb-1">Mô tả chiến dịch</label>
@@ -149,10 +156,50 @@ export default function AdminCampaignsPage() {
         </form>
       )}
 
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-xl p-4 text-xs font-semibold">
+        <div className="flex-grow">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Tìm kiếm chiến dịch</label>
+          <input
+            type="text"
+            placeholder="Tìm theo tên, mô tả..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none font-medium"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-ink/50 uppercase text-[9px] mb-1">Trạng thái hoạt động</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 outline-none"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="true">Hoạt động</option>
+            <option value="false">Tạm dừng</option>
+          </select>
+        </div>
+        {(searchTerm || statusFilter) && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("");
+              }}
+              className="bg-gray-100 hover:bg-ink hover:text-white px-3 py-1.5 rounded transition-colors cursor-pointer text-[10px] uppercase font-bold"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-xs text-ink/40 font-medium">Đang tải danh sách...</div>
-      ) : campaigns.length === 0 ? (
-        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không có chiến dịch nào.</div>
+      ) : filteredCampaigns.length === 0 ? (
+        <div className="text-center py-8 text-xs text-ink/40 font-medium">Không tìm thấy chiến dịch nào khớp bộ lọc.</div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl p-5 overflow-x-auto text-xs font-semibold">
           <table className="w-full text-left border-collapse">
@@ -168,7 +215,7 @@ export default function AdminCampaignsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-ink font-medium">
-              {campaigns.map((c: any) => (
+              {filteredCampaigns.map((c: any) => (
                 <tr key={c.id} className="hover:bg-gray-50/50">
                   <td className="py-3.5 pr-2 font-mono text-[10px] text-ink/40" title={c.id}>{c.id.slice(0, 8)}...</td>
                   <td className="py-3.5 pr-2">
