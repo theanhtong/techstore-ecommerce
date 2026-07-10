@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { RecycleBinController } from './recycle-bin.controller.js';
+import { RecycleBinService } from './recycle-bin.service.js';
+import { PrismaModule } from '../prisma/prisma.module.js';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [RecycleBinController],
+  providers: [RecycleBinService],
+  exports: [RecycleBinService],
+})
+export class RecycleBinModule {}

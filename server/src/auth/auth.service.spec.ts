@@ -132,7 +132,7 @@ describe('AuthService', () => {
       expect(mockPrismaService.emailVerification.deleteMany).toHaveBeenCalled();
       expect(mockPrismaService.emailVerification.create).toHaveBeenCalled();
       expect(mockMailService.sendVerificationEmail).toHaveBeenCalled();
-      expect(result.message).toContain('Mã xác thực mới đã được gửi');
+      expect(result.message).toContain('A new verification code has been sent');
     });
 
     it('should create user, verification token, and send email for new user on success', async () => {
@@ -190,7 +190,7 @@ describe('AuthService', () => {
       expect(mockPrismaService.emailVerification.delete).toHaveBeenCalledWith({
         where: { token: 'valid-token' },
       });
-      expect(result.message).toContain('Xác thực email thành công');
+      expect(result.message).toContain('Email verified successfully');
     });
 
     it('should ignore P2025 errors on token deletion', async () => {
@@ -204,7 +204,7 @@ describe('AuthService', () => {
       });
 
       const result = await service.verifyEmail('valid-token');
-      expect(result.message).toContain('Xác thực email thành công');
+      expect(result.message).toContain('Email verified successfully');
     });
 
     it('should propagate other errors on token deletion', async () => {
@@ -230,7 +230,7 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       const result = await service.resendVerification(email);
-      expect(result.message).toContain('hệ thống đã gửi liên kết mới');
+      expect(result.message).toContain('a new link has been sent');
     });
 
     it('should throw BadRequestException if user is already verified', async () => {
@@ -275,7 +275,7 @@ describe('AuthService', () => {
       expect(mockPrismaService.emailVerification.deleteMany).toHaveBeenCalled();
       expect(mockPrismaService.emailVerification.create).toHaveBeenCalled();
       expect(mockMailService.sendVerificationEmail).toHaveBeenCalled();
-      expect(result.message).toContain('Mã xác thực mới đã được gửi');
+      expect(result.message).toContain('A new verification link has been sent');
     });
   });
 

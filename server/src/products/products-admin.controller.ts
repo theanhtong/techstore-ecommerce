@@ -55,6 +55,7 @@ export class ProductsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PRODUCT', action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {
@@ -83,6 +84,7 @@ export class ProductsAdminController {
   }
 
   @Delete(':id/variants/:vid')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PRODUCT_VARIANT', action: AuditAction.DELETE })
   removeVariant(
@@ -127,6 +129,7 @@ export class ProductsAdminController {
   }
 
   @Delete(':id/variants/:vid/images/:iid')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PRODUCT_IMAGE', action: AuditAction.DELETE })
   removeImage(

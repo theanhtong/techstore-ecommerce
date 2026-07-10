@@ -32,6 +32,7 @@ export class ReviewsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.reviewsService.adminRemove(id);
   }

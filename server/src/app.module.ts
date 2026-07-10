@@ -5,6 +5,8 @@ import { AuditLogModule } from './audit-log/audit-log.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BrandsModule } from './brands/brands.module.js';
 import { CampaignsModule } from './campaigns/campaigns.module.js';
+import { CleanupModule } from './cleanup/cleanup.module.js';
+import { RecycleBinModule } from './recycle-bin/recycle-bin.module.js';
 import { CartModule } from './cart/cart.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ConfigModule } from '@nestjs/config';
@@ -23,6 +25,7 @@ import { UsersModule } from './users/users.module.js';
 import { WishlistsModule } from './wishlists/wishlists.module.js';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   controllers: [AppController],
@@ -35,6 +38,7 @@ import { APP_GUARD } from '@nestjs/core';
   ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 20,
@@ -58,6 +62,8 @@ import { APP_GUARD } from '@nestjs/core';
     NotificationsModule,
     AuditLogModule,
     CampaignsModule,
+    CleanupModule,
+    RecycleBinModule,
   ],
 })
 export class AppModule { }

@@ -47,6 +47,7 @@ export class CategoriesAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType, action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {
