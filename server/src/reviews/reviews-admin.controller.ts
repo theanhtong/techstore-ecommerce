@@ -21,7 +21,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.STAFF)
 @Controller('admin/reviews')
 export class ReviewsAdminController {
   constructor(private readonly reviewsService: ReviewsService) {}
@@ -32,12 +32,13 @@ export class ReviewsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.reviewsService.adminRemove(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.STAFF)
   @Post(':id/replies')
   createReply(
     @CurrentUser() user: { id: string },

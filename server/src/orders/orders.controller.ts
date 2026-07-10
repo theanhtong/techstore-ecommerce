@@ -48,7 +48,8 @@ export class OrdersController {
   cancelOrder(
     @CurrentUser() user: { id: string },
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { reason?: string },
   ) {
-    return this.ordersService.cancelOrder(user.id, id);
+    return this.ordersService.cancelOrder(user.id, id, body.reason);
   }
 }

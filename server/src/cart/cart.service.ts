@@ -123,26 +123,47 @@ export class CartService {
       },
     });
 
-    if (existing) {
-      const newQty = existing.quantity + dto.quantity;
-      if (newQty > available) {
-        throw new BadRequestException(`Only ${available} items available`);
+    try {
+      if (existing) {
+        const newQty = existing.quantity + dto.quantity;
+        if (newQty > available) {
+          throw new BadRequestException(`Only ${available} items available`);
+        }
+
+        return await this.prisma.cartItem.update({
+          where: { id: existing.id },
+          data: { quantity: newQty },
+        });
       }
 
-      return this.prisma.cartItem.update({
-        where: { id: existing.id },
-        data: { quantity: newQty },
+      return await this.prisma.cartItem.create({
+        data: {
+          id: uuidv7(),
+          cartId: cart.id,
+          variantId: dto.variantId,
+          quantity: dto.quantity,
+        },
       });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        const concurrentItem = await this.prisma.cartItem.findUnique({
+          where: {
+            cartId_variantId: { cartId: cart.id, variantId: dto.variantId },
+          },
+        });
+        if (concurrentItem) {
+          const newQty = concurrentItem.quantity + dto.quantity;
+          if (newQty > available) {
+            throw new BadRequestException(`Only ${available} items available`);
+          }
+          return this.prisma.cartItem.update({
+            where: { id: concurrentItem.id },
+            data: { quantity: newQty },
+          });
+        }
+      }
+      throw err;
     }
-
-    return this.prisma.cartItem.create({
-      data: {
-        id: uuidv7(),
-        cartId: cart.id,
-        variantId: dto.variantId,
-        quantity: dto.quantity,
-      },
-    });
   }
 
   async updateItem(userId: string, itemId: string, dto: UpdateCartItemDto) {
@@ -185,11 +206,11 @@ export class CartService {
   }
 
   private async assertCartItemOwner(userId: string, itemId: string) {
-    const cart = await this.prisma.cart.findUnique({ where: { userId } });
-    if (!cart) throw new NotFoundException('Cart not found');
-
     const item = await this.prisma.cartItem.findFirst({
-      where: { id: itemId, cartId: cart.id },
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
     });
     if (!item) throw new NotFoundException(`Cart item #${itemId} not found`);
 

@@ -59,6 +59,7 @@ export class PromotionsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PROMOTION', action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {
@@ -76,6 +77,7 @@ export class PromotionsAdminController {
   }
 
   @Delete(':id/products/:promotionProductId')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType: 'PROMOTION_PRODUCT', action: AuditAction.DELETE })
   removeProduct(

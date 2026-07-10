@@ -33,7 +33,7 @@ export class OrdersService {
     private readonly notificationsService: NotificationsService,
     @Inject(SHIPPING_PROVIDER)
     private readonly shippingProvider: IShippingProvider,
-  ) {}
+  ) { }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     const address = await this.prisma.address.findUnique({
@@ -111,16 +111,6 @@ export class OrdersService {
     let couponId: string | null = null;
     let discountAmount = 0;
 
-    if (dto.couponCode) {
-      const result = await this.couponsService.applyToOrder(
-        userId,
-        dto.couponCode,
-        subtotal,
-      );
-      couponId = result.coupon.id;
-      discountAmount = result.discountAmount;
-    }
-
     const totalWeight = pricedItems.reduce(
       (sum) => sum + (Number(process.env.GHN_DEFAULT_ITEM_WEIGHT) || 500),
       0,
@@ -136,8 +126,6 @@ export class OrdersService {
       insuranceValue: Number(process.env.GHN_INSURANCE_VALUE) || 0,
       codAmount: 0,
     });
-
-    const total = subtotal - discountAmount + shippingFee;
 
     const shippingSnapshot = {
       fullName: address.fullName,
@@ -157,6 +145,48 @@ export class OrdersService {
           FOR UPDATE
         `;
 
+        // Đối chiếu lại giá và khuyến mãi hiện tại trong database để tránh lỗi thay đổi giá trong lúc chờ gọi API GHN
+        const txCartItems = await tx.cartItem.findMany({
+          where: { id: { in: dto.cartItemIds } },
+          include: {
+            variant: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    categoryId: true,
+                    brandId: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const txDiscountMap = await this.promotionsService.resolveDiscountPercentForProducts(
+          txCartItems.map((i) => ({
+            id: i.variant.product.id,
+            categoryId: i.variant.product.categoryId,
+            brandId: i.variant.product.brandId,
+          })),
+        );
+
+        const txSubtotal = txCartItems.reduce((sum, item) => {
+          const price = toNumber(item.variant.price);
+          const discountPercent = txDiscountMap.get(item.variant.product.id);
+          const unitPrice =
+            discountPercent !== undefined
+              ? Math.max(price - (price * discountPercent) / 100, 0)
+              : price;
+          return sum + unitPrice * item.quantity;
+        }, 0);
+
+        if (Math.abs(txSubtotal - subtotal) > 0.01) {
+          throw new BadRequestException(
+            'Product price or promotion has changed. Please reload your cart and try again.',
+          );
+        }
+
         const inventories = await tx.inventory.findMany({
           where: { variantId: { in: variantIds } },
         });
@@ -170,6 +200,28 @@ export class OrdersService {
             );
           }
         }
+
+        if (dto.couponCode) {
+          const couponRows = await tx.$queryRaw<{ id: string }[]>`
+            SELECT id FROM coupons
+            WHERE code = ${dto.couponCode}
+            FOR UPDATE
+          `;
+          if (couponRows.length === 0) {
+            throw new BadRequestException('Coupon not found');
+          }
+
+          const result = await this.couponsService.applyToOrder(
+            userId,
+            dto.couponCode,
+            subtotal,
+            tx,
+          );
+          couponId = result.coupon.id;
+          discountAmount = result.discountAmount;
+        }
+
+        const total = subtotal - discountAmount + shippingFee;
 
         const orderId = uuidv7();
         const order = await tx.order.create({
@@ -210,12 +262,14 @@ export class OrdersService {
           include: { items: true },
         });
 
-        for (const item of pricedItems) {
-          await tx.inventory.update({
-            where: { variantId: item.variantId },
-            data: { reservedQuantity: { increment: item.quantity } },
-          });
-        }
+        await Promise.all(
+          pricedItems.map((item) =>
+            tx.inventory.update({
+              where: { variantId: item.variantId },
+              data: { reservedQuantity: { increment: item.quantity } },
+            }),
+          ),
+        );
 
         if (couponId) {
           await tx.coupon.update({
@@ -237,14 +291,14 @@ export class OrdersService {
             userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber} đã được tạo`,
+            body: `Order #${order.orderNumber} has been created`,
           });
         }
 
         return order;
       },
       {
-        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         timeout: 10000,
       },
     );
@@ -286,7 +340,7 @@ export class OrdersService {
     return order;
   }
 
-  async cancelOrder(userId: string, orderId: string) {
+  async cancelOrder(userId: string, orderId: string, reason?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -326,16 +380,16 @@ export class OrdersService {
             userId: order.userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber} đã được hủy`,
+            body: `Order #${order.orderNumber} has been cancelled`,
           });
         }
 
         return tx.order.update({
           where: { id: orderId },
-          data: { status: OrderStatus.CANCELLED },
+          data: { status: OrderStatus.CANCELLED, cancelReason: reason },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 
@@ -344,6 +398,7 @@ export class OrdersService {
       ...(query.search && {
         orderNumber: { contains: query.search, mode: 'insensitive' as const },
       }),
+      ...(query.status && { status: query.status }),
     };
 
     const [data, total] = await this.prisma.$transaction([
@@ -354,13 +409,34 @@ export class OrdersService {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, email: true } },
+          payment: { select: { method: true, status: true } },
           items: true,
+          shipment: {
+            include: { trackingHistory: { orderBy: { createdAt: 'asc' } } },
+          },
         },
       }),
       this.prisma.order.count({ where }),
     ]);
 
     return buildPaginated(data, total, query.page, query.limit);
+  }
+
+  async findOne(orderId: string) {
+    return this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: true,
+        payment: true,
+        coupon: {
+          select: { code: true, discountType: true, discountValue: true },
+        },
+        shipment: {
+          include: { trackingHistory: { orderBy: { createdAt: 'asc' } } },
+        },
+      },
+    });
   }
 
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto) {
@@ -417,16 +493,19 @@ export class OrdersService {
             userId: order.userId,
             type: notif.type,
             title: notif.title,
-            body: `Đơn hàng #${order.orderNumber}`,
+            body: `Order #${order.orderNumber}`,
           });
         }
 
         return tx.order.update({
           where: { id: orderId },
-          data: { status: dto.status },
+          data: {
+            status: dto.status,
+            ...(dto.status === OrderStatus.CANCELLED && { cancelReason: dto.cancelReason }),
+          },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 }

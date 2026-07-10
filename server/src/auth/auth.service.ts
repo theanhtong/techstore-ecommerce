@@ -15,7 +15,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { MailService } from '../mail/mail.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RegisterDto } from './dto/register.dto.js';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { uuidv7 } from 'uuidv7';
 
 @Injectable()
@@ -24,13 +24,63 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto): Promise<{ message: string }> {
+    const threshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    await this.prisma.user.deleteMany({
+      where: {
+        emailVerifiedAt: null,
+        createdAt: { lt: threshold },
+      },
+    });
+
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existing) throw new ConflictException('Email already exists');
+
+    if (existing) {
+      if (existing.emailVerifiedAt) {
+        throw new ConflictException('Email already exists');
+      }
+      const lastVerification = await this.prisma.emailVerification.findFirst({
+        where: { userId: existing.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
+        throw new BadRequestException('Please wait at least 60 seconds between registration/verification code requests.');
+      }
+
+      const hashed = await bcrypt.hash(dto.password, 10);
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          password: hashed,
+          name: dto.name,
+        },
+      });
+
+      await this.prisma.emailVerification.deleteMany({
+        where: { userId: existing.id },
+      });
+
+      const token = randomBytes(32).toString('hex');
+      await this.prisma.emailVerification.create({
+        data: {
+          id: uuidv7(),
+          userId: existing.id,
+          token,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+        },
+      });
+
+      await this.mailService.sendVerificationEmail(existing.email, dto.name, token);
+
+      return {
+        message: 'A new verification code has been sent to your email. Please check your inbox.',
+      };
+    }
 
     const hashed = await bcrypt.hash(dto.password, 10);
 
@@ -67,18 +117,65 @@ export class AuthService {
       where: { token },
     });
 
-    if (!record) throw new NotFoundException('Invalid verification token');
+    if (!record) throw new NotFoundException('Invalid or expired verification token.');
     if (record.expiresAt < new Date())
-      throw new BadRequestException('Token expired');
+      throw new BadRequestException('Verification token has expired.');
 
     await this.prisma.user.update({
       where: { id: record.userId },
       data: { emailVerifiedAt: new Date() },
     });
 
-    await this.prisma.emailVerification.delete({ where: { token } });
+    try {
+      await this.prisma.emailVerification.delete({ where: { token } });
+    } catch (err: any) {
+      if (err.code !== 'P2025') {
+        throw err;
+      }
+    }
 
-    return { message: 'Email verified successfully. You can now login.' };
+    return { message: 'Email verified successfully. You can now log in.' };
+  }
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Thực hành bảo mật: không tiết lộ sự tồn tại của email
+    if (!user) {
+      return { message: 'If the email exists and is not verified, a new link has been sent.' };
+    }
+    if (user.emailVerifiedAt) {
+      throw new BadRequestException('Email is already verified.');
+    }
+
+    const lastVerification = await this.prisma.emailVerification.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastVerification && Date.now() - lastVerification.createdAt.getTime() < 60 * 1000) {
+      throw new BadRequestException('Please wait at least 60 seconds between resend email requests.');
+    }
+
+    await this.prisma.emailVerification.deleteMany({
+      where: { userId: user.id },
+    });
+
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.emailVerification.create({
+      data: {
+        id: uuidv7(),
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+      },
+    });
+
+    await this.mailService.sendVerificationEmail(user.email, user.name, token);
+
+    return { message: 'A new verification link has been sent to your email.' };
   }
 
   async login(
@@ -115,15 +212,27 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const session = await this.prisma.session.findFirst({
-      where: { userId: payload.sub },
+    if (!payload.jti) {
+      throw new UnauthorizedException('Invalid refresh token format');
+    }
+
+    const session = await this.prisma.session.findUnique({
+      where: { id: payload.jti },
     });
     if (!session) throw new UnauthorizedException('Session not found');
 
-    const valid = await bcrypt.compare(refreshToken, session.token);
+    const hash = createHash('sha256').update(refreshToken).digest('hex');
+    const valid = session.token === hash;
     if (!valid) throw new UnauthorizedException('Invalid refresh token');
 
-    await this.prisma.session.delete({ where: { id: session.id } });
+    try {
+      await this.prisma.session.delete({ where: { id: session.id } });
+    } catch (err: any) {
+      if (err.code === 'P2025') {
+        throw new UnauthorizedException('Session already refreshed or invalid');
+      }
+      throw err;
+    }
 
     return this.generateTokens(payload.sub, payload.email, payload.role);
   }
@@ -139,23 +248,25 @@ export class AuthService {
     ip?: string,
     userAgent?: string,
   ): Promise<AuthResponse> {
+    const sessionId = uuidv7();
     const payload: JwtPayload = { sub: userId, email, role };
+    const rtPayload: JwtPayload = { ...payload, jti: sessionId };
 
     const accessToken = this.jwt.sign(payload, {
       secret: process.env.JWT_SECRET,
       expiresIn: '15m',
     });
 
-    const refreshToken = this.jwt.sign(payload, {
+    const refreshToken = this.jwt.sign(rtPayload, {
       secret: process.env.JWT_REFRESH_SECRET,
       expiresIn: '7d',
     });
 
-    const hashedRt = await bcrypt.hash(refreshToken, 10);
+    const hashedRt = createHash('sha256').update(refreshToken).digest('hex');
 
     await this.prisma.session.create({
       data: {
-        id: uuidv7(),
+        id: sessionId,
         userId,
         token: hashedRt,
         ipAddress: ip,

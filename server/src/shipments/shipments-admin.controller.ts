@@ -21,7 +21,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 @Roles(Role.ADMIN)
 @Controller('admin/shipments')
 export class ShipmentsAdminController {
-  constructor(private readonly shipmentsService: ShipmentsService) {}
+  constructor(private readonly shipmentsService: ShipmentsService) { }
 
   @Post('orders/:orderId')
   createShipment(

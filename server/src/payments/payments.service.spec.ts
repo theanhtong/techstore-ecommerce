@@ -40,7 +40,6 @@ const { buildPaginated } =
 describe('PaymentsService', () => {
   let service: any;
 
-  // Định nghĩa mock object dạng Record<string, any> để tránh lỗi type 'never' một cách triệt để
   const mockPrismaService: Record<string, any> = {
     payment: {
       findUnique: jest.fn(),
@@ -55,7 +54,16 @@ describe('PaymentsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
-    $transaction: jest.fn((arr: any) => Promise.all(arr)),
+    $transaction: jest.fn((val: any) => {
+      if (typeof val === 'function') {
+        return val(mockPrismaService);
+      }
+      return Promise.all(val);
+    }),
+    $queryRaw: jest.fn(async () => {
+      const mockResult = await mockPrismaService.payment.findUnique();
+      return mockResult ? [mockResult] : [];
+    }),
   };
 
   const mockOrdersService: Record<string, any> = {};
@@ -189,7 +197,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: true,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue(null);
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
       const result = await service.handleVnpayIpn(mockQuery);
       expect(result).toEqual({ RspCode: '01', Message: 'Payment not found' });
@@ -200,7 +208,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: true,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         status: PaymentStatus.PAID,
       });
@@ -218,10 +226,11 @@ describe('PaymentsService', () => {
         isSuccess: true,
         transactionId: 'tx-999',
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         orderId: 'order-1',
         status: PaymentStatus.PENDING,
+        order: { status: 'CONFIRMED' },
       });
       mockPrismaService.payment.update.mockResolvedValue({});
       mockPrismaService.order.update.mockResolvedValue({});
@@ -242,7 +251,7 @@ describe('PaymentsService', () => {
         orderId: 'order-1',
         isSuccess: false,
       });
-      mockPrismaService.payment.findFirst.mockResolvedValue({
+      mockPrismaService.payment.findUnique.mockResolvedValue({
         id: 'pm-1',
         orderId: 'order-1',
         status: PaymentStatus.PENDING,

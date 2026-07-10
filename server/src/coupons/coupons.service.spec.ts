@@ -28,6 +28,7 @@ jest.unstable_mockModule('../common/helpers/price.hepler.js', () => ({
 
 const { CouponsService } = await import('./coupons.service.js');
 const { PrismaService } = await import('../prisma/prisma.service.js');
+const { CampaignsService } = await import('../campaigns/campaigns.service.js');
 const { buildPaginated } =
   await import('../common/helpers/pagination.helper.js');
 
@@ -42,10 +43,14 @@ describe('CouponsService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
     },
-    promotion: {
+    campaign: {
       findUnique: jest.fn(),
     },
     $transaction: jest.fn((arr: any) => Promise.all(arr)),
+  };
+
+  const mockCampaignsService: Record<string, any> = {
+    isWithinPeriod: jest.fn(() => true),
   };
 
   beforeEach(async () => {
@@ -55,6 +60,10 @@ describe('CouponsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: CampaignsService,
+          useValue: mockCampaignsService,
         },
       ],
     }).compile();
@@ -75,12 +84,12 @@ describe('CouponsService', () => {
       );
     });
 
-    it('should throw NotFoundException if promotion does not exist', async () => {
+    it('should throw NotFoundException if campaign does not exist', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue(null);
-      mockPrismaService.promotion.findUnique.mockResolvedValue(null);
+      mockPrismaService.campaign.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ code: 'SALE10', promotionId: 'promo-1' }),
+        service.create({ code: 'SALE10', campaignId: 'campaign-1' }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -224,7 +233,7 @@ describe('CouponsService', () => {
     it('should return invalid if coupon expired', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue({
         isActive: true,
-        expiresAt: new Date(Date.now() - 5000),
+        endsAt: new Date(Date.now() - 5000),
       });
 
       const result = await service.validate('user-1', {
@@ -238,7 +247,7 @@ describe('CouponsService', () => {
     it('should return invalid if usage limit reached', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue({
         isActive: true,
-        expiresAt: null,
+        endsAt: null,
         usageLimit: 10,
         usedCount: 10,
       });
@@ -254,7 +263,7 @@ describe('CouponsService', () => {
     it('should return invalid if per user limit reached', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue({
         isActive: true,
-        expiresAt: null,
+        endsAt: null,
         usageLimit: null,
         perUserLimit: 1,
         usages: [{ id: 'usage-1' }],
@@ -273,7 +282,7 @@ describe('CouponsService', () => {
     it('should return invalid if order subtotal is below minOrderValue', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue({
         isActive: true,
-        expiresAt: null,
+        endsAt: null,
         usageLimit: null,
         perUserLimit: null,
         usages: [],
@@ -291,7 +300,7 @@ describe('CouponsService', () => {
     it('should validate percentage coupon and respect maxDiscount', async () => {
       mockPrismaService.coupon.findUnique.mockResolvedValue({
         isActive: true,
-        expiresAt: null,
+        endsAt: null,
         usageLimit: null,
         perUserLimit: null,
         usages: [],
@@ -324,7 +333,7 @@ describe('CouponsService', () => {
       const mockCoupon = {
         id: 'coupon-1',
         isActive: true,
-        expiresAt: null,
+        endsAt: null,
         usageLimit: null,
         perUserLimit: null,
         usages: [],

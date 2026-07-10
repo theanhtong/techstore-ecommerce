@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-substrate: #FBFBFA;
+  --color-substrate-dark: #F7F6F3;
+  --color-ink: #111111;
+  --color-hazard: #D32F2F;
+  /* Warm, premium red accent */
+
+  --font-mono: ui-monospace, "SF Mono", "Geist Mono", "JetBrains Mono", monospace;
+  --font-sans: "SF Pro Display", "Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-substrate);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    overflow-y: scroll;
+  }
+
+  /* Modern clean focus states */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+/* Subtle, thin borders for clean e-commerce partitions */
+.grid-blueprints {
+  display: grid;
+  gap: 1px;
+  background-color: #EAEAEA;
+}
+
+.grid-blueprints>* {
+  background-color: #FFFFFF;
+}

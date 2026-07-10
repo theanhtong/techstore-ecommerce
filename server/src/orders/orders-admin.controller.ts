@@ -7,6 +7,7 @@ import {
   Patch,
   Query,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
@@ -19,14 +20,21 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.STAFF)
 @Controller('admin/orders')
 export class OrdersAdminController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) { }
 
   @Get()
   findAll(@Query() query: PaginationDto) {
     return this.ordersService.findAll(query);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const order = await this.ordersService.findOne(id);
+    if (!order) throw new NotFoundException('Order not found');
+    return order;
   }
 
   @Patch(':id/status')

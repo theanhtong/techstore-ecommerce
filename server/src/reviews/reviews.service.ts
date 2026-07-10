@@ -167,6 +167,12 @@ export class ReviewsService {
         include: {
           user: { select: { id: true, name: true, email: true } },
           product: { select: { id: true, name: true, slug: true } },
+          replies: {
+            include: {
+              user: { select: { id: true, name: true, avatarUrl: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
         },
       }),
       this.prisma.review.count({ where }),

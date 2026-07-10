@@ -58,14 +58,19 @@ export class ProductsService {
           category: true,
           brand: true,
           images: true,
-          variants: { select: { id: true, price: true } },
+          variants: {
+            include: {
+              images: { orderBy: { order: 'asc' } },
+              inventory: true,
+            },
+          },
         },
       }),
       this.prisma.product.count({ where }),
     ]);
 
-    const discountMap =
-      await this.promotionsService.resolveDiscountPercentForProducts(
+    const promoMap =
+      await this.promotionsService.resolvePromotionsAndCampaignsForProducts(
         data.map((p) => ({
           id: p.id,
           categoryId: p.categoryId,
@@ -74,16 +79,19 @@ export class ProductsService {
       );
 
     const enriched = data.map((product) => {
-      const discountPercent = discountMap.get(product.id);
+      const promoInfo = promoMap.get(product.id);
+      const discountPercent = promoInfo?.discountPercent;
+      const campaign = promoInfo?.campaign || null;
+
       const variants = product.variants.map((v) => {
         const price = toNumber(v.price);
         const salePrice =
-          discountPercent !== undefined
+          discountPercent !== undefined && discountPercent > 0
             ? Math.max(price - (price * discountPercent) / 100, 0)
             : null;
         return { ...v, price, salePrice };
       });
-      return { ...product, variants };
+      return { ...product, variants, campaign };
     });
 
     return buildPaginated(enriched, total, query.page, query.limit);
@@ -106,26 +114,28 @@ export class ProductsService {
     });
     if (!product) throw new NotFoundException(`Product #${id} not found`);
 
-    const discountMap =
-      await this.promotionsService.resolveDiscountPercentForProducts([
+    const promoMap =
+      await this.promotionsService.resolvePromotionsAndCampaignsForProducts([
         {
           id: product.id,
           categoryId: product.categoryId,
           brandId: product.brandId,
         },
       ]);
-    const discountPercent = discountMap.get(product.id);
+    const promoInfo = promoMap.get(product.id);
+    const discountPercent = promoInfo?.discountPercent;
+    const campaign = promoInfo?.campaign || null;
 
     const variants = product.variants.map((v) => {
       const price = toNumber(v.price);
       const salePrice =
-        discountPercent !== undefined
+        discountPercent !== undefined && discountPercent > 0
           ? Math.max(price - (price * discountPercent) / 100, 0)
           : null;
       return { ...v, price, salePrice };
     });
 
-    return { ...product, variants };
+    return { ...product, variants, campaign };
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {

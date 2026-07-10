@@ -27,7 +27,7 @@ const entityType = 'COUPON' as string;
 
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.STAFF)
 @Controller('admin/coupons')
 export class CouponsAdminController {
   constructor(private readonly couponsService: CouponsService) {}
@@ -57,6 +57,7 @@ export class CouponsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType, action: AuditAction.DELETE })
   remove(@Param('id', ParseUUIDPipe) id: string) {

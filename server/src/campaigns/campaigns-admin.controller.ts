@@ -48,6 +48,7 @@ export class CampaignsController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.campaignsService.remove(id);
   }

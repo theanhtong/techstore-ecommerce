@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { PromotionScope } from '../generated/prisma/enums.js';
 import { UpdatePromotionDto } from './dto/update-promotion.dto.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
+import { clampToCampaignPeriod } from '../common/helpers/campaign-period.helper.js';
 import { toNumber } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
@@ -41,20 +42,27 @@ export class PromotionsService {
   ) {}
 
   async create(dto: CreatePromotionDto) {
+    let startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    let endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+
     if (dto.campaignId) {
       const campaign = await this.prisma.campaign.findUnique({
         where: { id: dto.campaignId },
       });
       if (!campaign)
         throw new NotFoundException(`Campaign #${dto.campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(campaign, dto.startsAt, dto.endsAt);
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.promotion.create({
       data: {
         id: uuidv7(),
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -72,7 +80,16 @@ export class PromotionsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { promotionProducts: true } } },
+        include: {
+          campaign: { select: { id: true, name: true, isActive: true } },
+          promotionProducts: {
+            include: {
+              product: { select: { id: true, name: true } },
+              category: { select: { id: true, name: true } },
+              brand: { select: { id: true, name: true } },
+            },
+          },
+        },
       }),
       this.prisma.promotion.count({ where }),
     ]);
@@ -99,14 +116,46 @@ export class PromotionsService {
   }
 
   async update(id: string, dto: UpdatePromotionDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+
+    const campaignId =
+      dto.campaignId !== undefined ? dto.campaignId : existing.campaignId;
+
+    let startsAt =
+      dto.startsAt !== undefined
+        ? dto.startsAt
+          ? new Date(dto.startsAt)
+          : null
+        : existing.startsAt;
+    let endsAt =
+      dto.endsAt !== undefined
+        ? dto.endsAt
+          ? new Date(dto.endsAt)
+          : null
+        : existing.endsAt;
+
+    if (campaignId) {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id: campaignId },
+      });
+      if (!campaign)
+        throw new NotFoundException(`Campaign #${campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(
+        campaign,
+        startsAt?.toISOString(),
+        endsAt?.toISOString(),
+      );
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
+    }
 
     return this.prisma.promotion.update({
       where: { id },
       data: {
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -127,14 +176,14 @@ export class PromotionsService {
     ).length;
     if (scopeCount !== 1) {
       throw new BadRequestException(
-        'Phải chọn đúng 1 trong 3: productId, categoryId, hoặc brandId',
+        'Must select exactly one of: productId, categoryId, or brandId',
       );
     }
 
     if (dto.discountType === 'FIXED_AMOUNT') {
       throw new BadRequestException(
-        'Giảm giá theo Product/Category/Brand chỉ hỗ trợ PERCENTAGE. ' +
-          'Dùng Coupon (cấp order) nếu cần giảm giá cố định.',
+        'Product, Category, and Brand promotions only support percentage-based discounts. ' +
+          'Use an order-level coupon if you need a fixed amount discount.',
       );
     }
 
@@ -241,7 +290,8 @@ export class PromotionsService {
     const valid = candidates.filter(
       (c) =>
         !c.promotion.campaign ||
-        this.campaignsService.isWithinPeriod(c.promotion.campaign),
+        (c.promotion.campaign.isActive &&
+          this.campaignsService.isWithinPeriod(c.promotion.campaign)),
     );
 
     for (const product of products) {
@@ -287,6 +337,75 @@ export class PromotionsService {
 
     const salePrice = Math.max(price - (price * discountPercent) / 100, 0);
     return { price, salePrice, appliedPromotionId: null };
+  }
+
+  async resolvePromotionsAndCampaignsForProducts(
+    products: ProductScopeInput[],
+  ): Promise<Map<string, { discountPercent: number; campaign: any }>> {
+    const result = new Map<string, { discountPercent: number; campaign: any }>();
+    if (products.length === 0) return result;
+
+    const productIds = products.map((p) => p.id);
+    const categoryIds = [...new Set(products.map((p) => p.categoryId))];
+    const brandIds = [
+      ...new Set(products.map((p) => p.brandId).filter(Boolean) as string[]),
+    ];
+    const now = new Date();
+
+    const candidates = await this.prisma.promotionProduct.findMany({
+      where: {
+        OR: [
+          { productId: { in: productIds } },
+          { categoryId: { in: categoryIds } },
+          ...(brandIds.length ? [{ brandId: { in: brandIds } }] : []),
+        ],
+        promotion: {
+          isActive: true,
+          OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
+        },
+      },
+      include: { promotion: { include: { campaign: true } } },
+    });
+
+    const valid = candidates.filter(
+      (c) =>
+        !c.promotion.campaign ||
+        (c.promotion.campaign.isActive &&
+          this.campaignsService.isWithinPeriod(c.promotion.campaign)),
+    );
+
+    for (const product of products) {
+      const applicable = valid.filter(
+        (c) =>
+          c.productId === product.id ||
+          c.categoryId === product.categoryId ||
+          (product.brandId && c.brandId === product.brandId),
+      );
+      if (applicable.length === 0) {
+        result.set(product.id, { discountPercent: 0, campaign: null });
+        continue;
+      }
+
+      const winner = applicable.sort((a, b) => {
+        const rankDiff = SCOPE_RANK[b.scope] - SCOPE_RANK[a.scope];
+        if (rankDiff !== 0) return rankDiff;
+        return b.promotion.priority - a.promotion.priority;
+      })[0];
+
+      result.set(product.id, {
+        discountPercent: toNumber(winner.discountValue),
+        campaign: winner.promotion.campaign
+          ? {
+              id: winner.promotion.campaign.id,
+              name: winner.promotion.campaign.name,
+              description: winner.promotion.campaign.description,
+            }
+          : null,
+      });
+    }
+
+    return result;
   }
 
   calculateSalePrice(

@@ -43,6 +43,7 @@ export class BrandsAdminController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @UseInterceptors(AuditLogInterceptor)
   @Auditable({ entityType, action: AuditAction.DELETE })
   remove(@Param('id') id: string) {

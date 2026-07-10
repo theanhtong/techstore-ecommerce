@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { UpdateCouponDto } from './dto/update-coupon.dto.js';
 import { ValidateCouponDto } from './dto/validate-coupon.dto.js';
 import { buildPaginated } from '../common/helpers/pagination.helper.js';
+import { clampToCampaignPeriod } from '../common/helpers/campaign-period.helper.js';
 import { toNumber } from '../common/helpers/price.hepler.js';
 import { uuidv7 } from 'uuidv7';
 
@@ -20,7 +21,7 @@ export class CouponsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly campaignsService: CampaignsService,
-  ) {}
+  ) { }
 
   async create(dto: CreateCouponDto) {
     const existing = await this.prisma.coupon.findUnique({
@@ -29,20 +30,27 @@ export class CouponsService {
     if (existing)
       throw new ConflictException(`Coupon code "${dto.code}" already exists`);
 
+    let startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    let endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+
     if (dto.campaignId) {
       const campaign = await this.prisma.campaign.findUnique({
         where: { id: dto.campaignId },
       });
       if (!campaign)
         throw new NotFoundException(`Campaign #${dto.campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(campaign, dto.startsAt, dto.endsAt);
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.coupon.create({
       data: {
         id: uuidv7(),
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -60,6 +68,7 @@ export class CouponsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
+        include: { campaign: { select: { id: true, name: true, isActive: true } }, },
       }),
       this.prisma.coupon.count({ where }),
     ]);
@@ -83,23 +92,55 @@ export class CouponsService {
   }
 
   async update(id: string, dto: UpdateCouponDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
 
     if (dto.code) {
-      const existing = await this.prisma.coupon.findUnique({
+      const codeOwner = await this.prisma.coupon.findUnique({
         where: { code: dto.code },
       });
-      if (existing && existing.id !== id) {
+      if (codeOwner && codeOwner.id !== id) {
         throw new ConflictException(`Coupon code "${dto.code}" already exists`);
       }
+    }
+
+    const campaignId =
+      dto.campaignId !== undefined ? dto.campaignId : existing.campaignId;
+
+    let startsAt =
+      dto.startsAt !== undefined
+        ? dto.startsAt
+          ? new Date(dto.startsAt)
+          : null
+        : existing.startsAt;
+    let endsAt =
+      dto.endsAt !== undefined
+        ? dto.endsAt
+          ? new Date(dto.endsAt)
+          : null
+        : existing.endsAt;
+
+    if (campaignId) {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id: campaignId },
+      });
+      if (!campaign)
+        throw new NotFoundException(`Campaign #${campaignId} not found`);
+
+      const clamped = clampToCampaignPeriod(
+        campaign,
+        startsAt?.toISOString(),
+        endsAt?.toISOString(),
+      );
+      startsAt = clamped.startsAt;
+      endsAt = clamped.endsAt;
     }
 
     return this.prisma.coupon.update({
       where: { id },
       data: {
         ...dto,
-        startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
-        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        startsAt,
+        endsAt,
       },
     });
   }
@@ -126,18 +167,19 @@ export class CouponsService {
       return { isValid: false, message: 'Coupon is inactive' };
 
     if (coupon.startsAt && coupon.startsAt > new Date()) {
-      return { isValid: false, message: 'Coupon chưa đến thời gian áp dụng' };
+      return { isValid: false, message: 'Coupon is not active yet' };
     }
     if (coupon.endsAt && coupon.endsAt < new Date()) {
       return { isValid: false, message: 'Coupon has expired' };
     }
     if (
       coupon.campaign &&
-      !this.campaignsService.isWithinPeriod(coupon.campaign)
+      (!coupon.campaign.isActive ||
+        !this.campaignsService.isWithinPeriod(coupon.campaign))
     ) {
       return {
         isValid: false,
-        message: 'Chiến dịch của coupon đã kết thúc hoặc chưa bắt đầu',
+        message: 'The coupon campaign has ended or is paused',
       };
     }
 
@@ -177,8 +219,9 @@ export class CouponsService {
     };
   }
 
-  async applyToOrder(userId: string, code: string, subtotal: number) {
-    const coupon = await this.prisma.coupon.findUnique({
+  async applyToOrder(userId: string, code: string, subtotal: number, tx?: any) {
+    const prismaClient = tx ?? this.prisma;
+    const coupon = await prismaClient.coupon.findUnique({
       where: { code },
       include: {
         usages: { where: { userId } },
@@ -190,17 +233,18 @@ export class CouponsService {
     if (!coupon.isActive) throw new BadRequestException('Coupon is inactive');
 
     if (coupon.startsAt && coupon.startsAt > new Date()) {
-      throw new BadRequestException('Coupon chưa đến thời gian áp dụng');
+      throw new BadRequestException('Coupon is not active yet');
     }
     if (coupon.endsAt && coupon.endsAt < new Date()) {
       throw new BadRequestException('Coupon has expired');
     }
     if (
       coupon.campaign &&
-      !this.campaignsService.isWithinPeriod(coupon.campaign)
+      (!coupon.campaign.isActive ||
+        !this.campaignsService.isWithinPeriod(coupon.campaign))
     ) {
       throw new BadRequestException(
-        'Chiến dịch của coupon đã kết thúc hoặc chưa bắt đầu',
+        'The coupon campaign has ended or is paused',
       );
     }
 
