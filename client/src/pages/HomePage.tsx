@@ -49,101 +49,103 @@ export default function HomePage() {
 
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-16 animate-fadeIn">
       {/* Hero Banner Section */}
-      <div className="relative rounded-2xl overflow-hidden bg-ink text-white p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8">
-        <div className="space-y-6 max-w-xl">
-          <span className="bg-hazard/10 text-hazard border border-hazard/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-ink via-ink to-neutral-900 text-white p-10 md:p-20 flex flex-col md:flex-row items-center justify-between gap-12 shadow-sm border border-neutral-800">
+        <div className="space-y-6 max-w-xl z-10">
+          <span className="bg-hazard/10 text-hazard border border-hazard/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
             Sự Kiện Đặc Biệt
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-            Nâng tầm trải nghiệm công nghệ cao cấp
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight uppercase">
+            Nâng tầm trải nghiệm công nghệ
           </h1>
-          <p className="text-sm text-gray-300 leading-relaxed">
-            Khám phá bộ sưu tập máy tính xách tay, điện thoại thông minh và phụ kiện chính hãng với cấu hình telemetry chuẩn xác nhất. Ưu đãi độc quyền chỉ dành riêng cho bạn.
+          <p className="text-sm text-neutral-300 leading-relaxed font-medium">
+            Khám phá bộ sưu tập máy tính xách tay, điện thoại thông minh và phụ kiện chính hãng từ các nhà sản xuất hàng đầu thế giới. Cam kết chất lượng cao cấp với mức giá ưu đãi nhất dành riêng cho bạn.
           </p>
-          <div>
+          <div className="pt-2">
             <Link
               to="/products"
-              className="inline-flex items-center gap-2 bg-white text-ink px-6 py-3.5 rounded-lg text-sm font-bold hover:bg-hazard hover:text-white transition-colors cursor-pointer"
+              className="btn bg-white text-ink border-white hover:bg-hazard hover:border-hazard hover:text-white"
             >
-              Mua sắm ngay
+              <span>Mua sắm ngay</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
-        <div className="w-full md:w-1/2 flex justify-center">
-          {/* Decorative Minimal SVG Mockup */}
-          <svg viewBox="0 0 400 300" className="w-full max-w-xs text-gray-700" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="50" y="40" width="300" height="200" rx="10" />
-            <path d="M50 210 h300 M200 240 v30 M150 270 h100" />
-            <circle cx="200" cy="120" r="40" className="text-hazard animate-pulse" strokeWidth="3" />
-            <path d="M180 120 h40 M200 100 v40" />
+        <div className="w-full md:w-1/2 flex justify-center relative">
+          {/* Elegant geometric glow graphic */}
+          <div className="absolute w-64 h-64 bg-hazard/20 rounded-full blur-3xl -top-10 -left-10 animate-pulse pointer-events-none" />
+          <svg viewBox="0 0 400 300" className="w-full max-w-xs text-neutral-700 select-none relative z-10" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="40" y="30" width="320" height="220" rx="12" stroke="currentColor" />
+            <path d="M40 210 h320" />
+            <path d="M200 250 v30 M140 280 h120" strokeLinecap="round" />
+            <circle cx="200" cy="120" r="45" className="text-hazard/80" strokeWidth="2.5" />
+            <path d="M185 120 h30 M200 105 v30" strokeLinecap="round" />
           </svg>
         </div>
       </div>
 
       {/* Trust Badges */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 p-6 rounded-xl flex items-start gap-4">
-          <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg">
-            <Truck className="w-6 h-6" />
+        <div className="bg-white border border-gray-150 p-6 rounded-xl flex items-start gap-4 shadow-2xs">
+          <div className="bg-neutral-50 text-ink p-3 rounded-lg border border-gray-100 flex-shrink-0">
+            <Truck className="w-5 h-5 text-hazard" />
           </div>
           <div>
-            <h4 className="font-bold text-sm text-ink">Giao hàng miễn phí</h4>
-            <p className="text-xs text-ink/60 mt-1">Áp dụng tự động cho mọi hóa đơn thanh toán trên 500.000đ.</p>
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-ink">Giao hàng miễn phí</h4>
+            <p className="text-xs text-ink/60 mt-1 leading-relaxed">Tự động áp dụng cho mọi hóa đơn thanh toán từ 500.000đ.</p>
           </div>
         </div>
-        <div className="bg-white border border-gray-100 p-6 rounded-xl flex items-start gap-4">
-          <div className="bg-blue-50 text-blue-600 p-3 rounded-lg">
-            <ShieldCheck className="w-6 h-6" />
+        <div className="bg-white border border-gray-150 p-6 rounded-xl flex items-start gap-4 shadow-2xs">
+          <div className="bg-neutral-50 text-ink p-3 rounded-lg border border-gray-100 flex-shrink-0">
+            <ShieldCheck className="w-5 h-5 text-hazard" />
           </div>
           <div>
-            <h4 className="font-bold text-sm text-ink">Thanh toán an toàn</h4>
-            <p className="text-xs text-ink/60 mt-1">Mã hóa bảo mật tuyệt đối qua cổng thanh toán VNPAY Online.</p>
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-ink">Thanh toán an toàn</h4>
+            <p className="text-xs text-ink/60 mt-1 leading-relaxed">Mã hóa bảo mật tuyệt đối qua cổng thanh toán VNPAY Online.</p>
           </div>
         </div>
-        <div className="bg-white border border-gray-100 p-6 rounded-xl flex items-start gap-4">
-          <div className="bg-rose-50 text-hazard p-3 rounded-lg">
-            <PhoneCall className="w-6 h-6" />
+        <div className="bg-white border border-gray-150 p-6 rounded-xl flex items-start gap-4 shadow-2xs">
+          <div className="bg-neutral-50 text-ink p-3 rounded-lg border border-gray-100 flex-shrink-0">
+            <PhoneCall className="w-5 h-5 text-hazard" />
           </div>
           <div>
-            <h4 className="font-bold text-sm text-ink">Hỗ trợ kỹ thuật 24/7</h4>
-            <p className="text-xs text-ink/60 mt-1">Đội ngũ kỹ thuật viên luôn sẵn sàng giải đáp thắc mắc của bạn.</p>
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-ink">Hỗ trợ kỹ thuật 24/7</h4>
+            <p className="text-xs text-ink/60 mt-1 leading-relaxed">Đội ngũ kỹ thuật viên luôn sẵn sàng giải đáp thắc mắc của bạn.</p>
           </div>
         </div>
       </div>
 
       {/* Categories Showcase */}
       <div className="space-y-6">
-        <h3 className="text-xl font-bold text-ink">Khám phá danh mục nổi bật</h3>
+        <h3 className="text-sm font-extrabold text-ink uppercase tracking-widest">Danh mục nổi bật</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div 
             onClick={() => navigate("/products")}
-            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs"
           >
-            <div className="space-y-2">
-              <Laptop className="w-8 h-8 text-ink/60 group-hover:text-hazard transition-colors" />
+            <div className="space-y-3">
+              <Laptop className="w-7 h-7 text-ink/60 group-hover:text-hazard transition-colors" />
               <h4 className="font-bold text-sm text-ink">Máy tính xách tay</h4>
             </div>
             <ArrowRight className="w-4 h-4 text-ink/40 group-hover:translate-x-1 transition-transform" />
           </div>
           <div 
             onClick={() => navigate("/products")}
-            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs"
           >
-            <div className="space-y-2">
-              <Smartphone className="w-8 h-8 text-ink/60 group-hover:text-hazard transition-colors" />
+            <div className="space-y-3">
+              <Smartphone className="w-7 h-7 text-ink/60 group-hover:text-hazard transition-colors" />
               <h4 className="font-bold text-sm text-ink">Điện thoại di động</h4>
             </div>
             <ArrowRight className="w-4 h-4 text-ink/40 group-hover:translate-x-1 transition-transform" />
           </div>
           <div 
             onClick={() => navigate("/products")}
-            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+            className="group bg-white border border-gray-200 hover:border-ink p-6 rounded-xl flex items-center justify-between cursor-pointer transition-all duration-200 shadow-2xs"
           >
-            <div className="space-y-2">
-              <Headphones className="w-8 h-8 text-ink/60 group-hover:text-hazard transition-colors" />
+            <div className="space-y-3">
+              <Headphones className="w-7 h-7 text-ink/60 group-hover:text-hazard transition-colors" />
               <h4 className="font-bold text-sm text-ink">Phụ kiện công nghệ</h4>
             </div>
             <ArrowRight className="w-4 h-4 text-ink/40 group-hover:translate-x-1 transition-transform" />
@@ -153,19 +155,18 @@ export default function HomePage() {
 
       {/* Featured Products */}
       <div className="space-y-6">
-        <div className="flex justify-between items-end border-b border-gray-100 pb-4">
-          <h3 className="text-xl font-bold text-ink">Sản phẩm nổi bật</h3>
-          <Link to="/products" className="text-xs font-semibold text-hazard hover:underline">
+        <div className="flex justify-between items-end border-b border-gray-150 pb-4">
+          <h3 className="text-sm font-extrabold text-ink uppercase tracking-widest">Sản phẩm nổi bật</h3>
+          <Link to="/products" className="text-xs font-bold text-hazard hover:underline uppercase tracking-wider">
             Xem tất cả &rarr;
           </Link>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
-            <div className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
-            <div className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
-            <div className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-72 bg-gray-100 border border-gray-200 rounded-xl animate-pulse"></div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -182,39 +183,42 @@ export default function HomePage() {
                   <Link
                     key={v.id}
                     to={`/product/${p.id}?variant=${v.id}`}
-                    className="group bg-white border border-gray-200 hover:border-gray-400 p-5 rounded-xl flex flex-col justify-between transition-colors relative"
+                    className="group bg-white border border-gray-200 hover:border-ink p-5 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all duration-250 relative"
                   >
                     <div>
-                      <div className="aspect-square bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden mb-4">
+                      <div className="aspect-square bg-neutral-50 rounded-lg flex items-center justify-center overflow-hidden mb-4 border border-neutral-100">
                         {imageUrl ? (
-                          <img src={imageUrl} alt={displayName} className="object-contain p-4 w-full h-full group-hover:scale-105 transition-transform" />
+                          <img src={imageUrl} alt={displayName} className="object-contain p-4 w-full h-full group-hover:scale-[1.03] transition-transform duration-300" />
                         ) : (
-                          <span className="text-xs text-ink/30">Không có hình ảnh</span>
+                          <span className="text-xs text-ink/30 font-medium">Không có hình ảnh</span>
                         )}
                       </div>
-                      <h4 className="font-bold text-sm text-ink group-hover:text-hazard transition-colors leading-snug mb-2">
+                      <span className="text-[10px] text-ink/40 font-bold uppercase tracking-wider">
+                        {p.brand?.name || "TechStore"}
+                      </span>
+                      <h4 className="font-bold text-sm text-ink group-hover:text-hazard transition-colors leading-snug mt-1 mb-2">
                         {displayName}
                       </h4>
                       {p.campaign?.description && (
-                        <div className="bg-rose-50 border border-rose-100 rounded px-2.5 py-1 text-[11px] text-hazard font-semibold leading-normal mb-2">
+                        <div className="bg-rose-50 border border-rose-100 rounded px-2.5 py-1 text-[10px] text-hazard font-bold uppercase tracking-wider mb-2">
                           Khuyến mãi: {p.campaign.description}
                         </div>
                       )}
                     </div>
                     <div className="border-t border-gray-100 pt-3 mt-4 flex justify-between items-center">
-                      <span className="text-xs text-ink/40">Giá bán</span>
+                      <span className="text-xs text-ink/40 font-medium">Giá bán</span>
                       <div>
                         {hasDiscount ? (
                           <div className="text-right">
-                            <div className="text-[11px] line-through text-ink/40 font-medium">
+                            <div className="text-[10px] line-through text-ink/40 font-medium">
                               {formatPrice(v.price)}
                             </div>
-                            <div className="text-sm font-bold text-hazard">
+                            <div className="text-sm font-black text-hazard">
                               {formatPrice(v.salePrice!)}
                             </div>
                           </div>
                         ) : (
-                          <div className="text-sm font-bold text-ink">
+                          <div className="text-sm font-black text-ink">
                             {formatPrice(v.price)}
                           </div>
                         )}

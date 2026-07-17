@@ -66,26 +66,21 @@ const CustomerLayout = () => {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-substrate">
-      {/* Announcement Strip */}
-      {/* <div className="bg-ink text-substrate text-[11px] font-semibold tracking-wider px-8 py-2.5 text-center uppercase">
-        Miễn phí vận chuyển cho mọi đơn hàng từ 500.000đ
-      </div> */}
-
       {/* Main Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-150 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4.5 flex justify-between items-center">
           {/* Logo */}
-          <Link to="/" className="text-xl font-bold tracking-tight text-ink hover:text-hazard transition-colors flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-hazard" />
-            TechStore
+          <Link to="/" className="text-lg font-black tracking-widest text-ink hover:text-hazard transition-colors flex items-center gap-2 uppercase">
+            <ShoppingBag className="w-5 h-5 text-hazard stroke-[2.5]" />
+            <span>TechStore</span>
           </Link>
 
           {/* Navigation Links */}
-          <nav className="flex items-center gap-6 text-sm font-medium">
+          <nav className="flex items-center gap-7 text-xs font-bold uppercase tracking-wider">
             <NavLink
               to="/"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
               }
             >
               <Home className="w-4 h-4" />
@@ -94,7 +89,7 @@ const CustomerLayout = () => {
             <NavLink
               to="/products"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
               }
             >
               <ShoppingBag className="w-4 h-4" />
@@ -103,7 +98,7 @@ const CustomerLayout = () => {
             <NavLink
               to="/cart"
               className={({ isActive }) =>
-                `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
               }
             >
               <div className="relative flex items-center justify-center">
@@ -121,7 +116,7 @@ const CustomerLayout = () => {
                 <NavLink
                   to="/orders"
                   className={({ isActive }) =>
-                    `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                    `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
                   }
                 >
                   <Package className="w-4 h-4" />
@@ -131,7 +126,7 @@ const CustomerLayout = () => {
                 <NavLink
                   to="/profile"
                   className={({ isActive }) =>
-                    `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                    `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
                   }
                 >
                   <User className="w-4 h-4" />
@@ -141,7 +136,7 @@ const CustomerLayout = () => {
                   <NavLink
                     to="/admin"
                     className={({ isActive }) =>
-                      `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                      `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
                     }
                   >
                     <Sliders className="w-4 h-4" />
@@ -150,7 +145,7 @@ const CustomerLayout = () => {
                 )}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 text-ink/70 hover:text-hazard cursor-pointer transition-colors font-medium"
+                  className="flex items-center gap-1.5 text-ink/75 hover:text-hazard cursor-pointer transition-all duration-200 uppercase font-bold"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Đăng xuất</span>
@@ -160,7 +155,7 @@ const CustomerLayout = () => {
               <NavLink
                 to="/auth"
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 hover:text-hazard transition-colors ${isActive ? "text-hazard font-semibold" : "text-ink/70"}`
+                  `flex items-center gap-1.5 hover:text-hazard transition-all duration-200 ${isActive ? "text-hazard" : "text-ink/75"}`
                 }
               >
                 <LogIn className="w-4 h-4" />
@@ -172,7 +167,7 @@ const CustomerLayout = () => {
       </header>
 
       {/* Main Content Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-10">
         <Outlet />
       </main>
 

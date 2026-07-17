@@ -219,11 +219,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Title Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <span className="text-xs text-ink/50 uppercase tracking-widest font-mono">Tài khoản</span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink mt-1">
+      <div className="border-b border-gray-150 pb-6">
+        <span className="text-xs text-ink/50 uppercase tracking-widest font-bold font-mono">Tài khoản</span>
+        <h1 className="text-3xl font-black tracking-tight text-ink mt-1 uppercase">
           Hồ sơ của bạn
         </h1>
       </div>
@@ -232,30 +232,30 @@ export default function ProfilePage() {
         {/* Left Side: General Profile Info & Change Password forms */}
         <div className="lg:col-span-1 space-y-6">
           {/* General Name Info */}
-          <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
+          <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 shadow-2xs">
             <h3 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2.5 flex items-center gap-2">
               <User className="w-4 h-4 text-hazard" />
               Thông tin cá nhân
             </h3>
-            <div className="text-xs font-semibold text-ink/55 uppercase font-mono">Email: {profile?.email}</div>
+            <div className="text-xs font-bold text-ink/55 uppercase font-mono tracking-wider">Email: {profile?.email}</div>
             
-            {nameMsg && <div className="p-2 border border-emerald-200 bg-emerald-50 rounded text-xs text-emerald-800 font-semibold">{nameMsg}</div>}
-            {nameErr && <div className="p-2 border border-hazard/20 bg-hazard/5 rounded text-xs text-hazard font-semibold">{nameErr}</div>}
+            {nameMsg && <div className="p-2 border border-emerald-250 bg-emerald-50 rounded-lg text-xs text-emerald-800 font-bold uppercase tracking-wider">{nameMsg}</div>}
+            {nameErr && <div className="p-2 border border-hazard/20 bg-hazard/5 rounded-lg text-xs text-hazard font-bold uppercase tracking-wider">{nameErr}</div>}
 
             <form onSubmit={handleNameSubmit(onUpdateName)} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Họ tên</label>
+                <label className="form-label">Họ và tên</label>
                 <input
                   type="text"
                   required
-                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:bg-white focus:border-ink"
+                  className="form-input bg-[#050505]/3"
                   {...registerName("name")}
                 />
               </div>
               <button
                 type="submit"
                 disabled={nameLoading}
-                className="w-full bg-ink text-substrate text-xs font-bold py-2.5 rounded-md hover:bg-hazard hover:text-white transition-colors cursor-pointer"
+                className="btn btn-primary w-full"
               >
                 {nameLoading ? "..." : "Cập nhật họ tên"}
               </button>
@@ -263,40 +263,40 @@ export default function ProfilePage() {
           </div>
 
           {/* Change Password form */}
-          <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
+          <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 shadow-2xs">
             <h3 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2.5 flex items-center gap-2">
               <Lock className="w-4 h-4 text-hazard" />
               Đổi mật khẩu
             </h3>
 
-            {passMsg && <div className="p-2 border border-emerald-200 bg-emerald-50 rounded text-xs text-emerald-800 font-semibold">{passMsg}</div>}
-            {passErr && <div className="p-2 border border-hazard/20 bg-hazard/5 rounded text-xs text-hazard font-semibold">{passErr}</div>}
+            {passMsg && <div className="p-2 border border-emerald-250 bg-emerald-50 rounded-lg text-xs text-emerald-800 font-bold uppercase tracking-wider">{passMsg}</div>}
+            {passErr && <div className="p-2 border border-hazard/20 bg-hazard/5 rounded-lg text-xs text-hazard font-bold uppercase tracking-wider">{passErr}</div>}
 
             <form onSubmit={handlePassSubmit(onChangePassword)} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Mật khẩu cũ</label>
+                <label className="form-label">Mật khẩu cũ</label>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:bg-white focus:border-ink"
+                  className="form-input bg-[#050505]/3"
                   {...registerPass("oldPassword")}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Mật khẩu mới</label>
+                <label className="form-label">Mật khẩu mới</label>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:bg-white focus:border-ink"
+                  className="form-input bg-[#050505]/3"
                   {...registerPass("newPassword")}
                 />
               </div>
               <button
                 type="submit"
                 disabled={passLoading}
-                className="w-full bg-ink text-substrate text-xs font-bold py-2.5 rounded-md hover:bg-hazard hover:text-white transition-colors cursor-pointer"
+                className="btn btn-primary w-full"
               >
                 {passLoading ? "..." : "Thay đổi mật khẩu"}
               </button>
@@ -306,7 +306,7 @@ export default function ProfilePage() {
 
         {/* Right Side: Shipping Addresses CRUD panel */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6">
+          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6 shadow-2xs">
             <h3 className="text-sm font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-3 flex justify-between items-center">
               <span className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-hazard" />
@@ -315,7 +315,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="text-[11px] font-semibold text-hazard hover:underline cursor-pointer flex items-center gap-1"
+                className="text-[10px] font-bold text-hazard hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
               >
                 <Plus className="w-3.5 h-3.5" />
                 {showAddForm ? "Hủy bỏ" : "Thêm địa chỉ"}
@@ -323,47 +323,47 @@ export default function ProfilePage() {
             </h3>
 
             {showAddForm && (
-              <form onSubmit={handleCreateAddress} className="space-y-4 border border-gray-100 p-5 rounded-lg bg-gray-50">
+              <form onSubmit={handleCreateAddress} className="space-y-4 border border-gray-100 p-5 rounded-xl bg-neutral-50/50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Người nhận hàng</label>
+                    <label className="form-label">Người nhận hàng</label>
                     <input
                       type="text"
                       required
                       placeholder="Nguyễn Văn A"
                       value={newAddress.fullName}
                       onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                      className="form-input bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Số điện thoại</label>
+                    <label className="form-label">Số điện thoại</label>
                     <input
                       type="text"
                       required
                       placeholder="0901234567"
                       value={newAddress.phone}
                       onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                      className="form-input bg-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Địa chỉ chi tiết (Đường, số nhà...)</label>
+                  <label className="form-label">Địa chỉ chi tiết (Đường, số nhà...)</label>
                   <input
                     type="text"
                     required
                     placeholder="123 Lê Lợi"
                     value={newAddress.addressLine}
                     onChange={(e) => setNewAddress({ ...newAddress, addressLine: e.target.value })}
-                    className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                    className="form-input bg-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Tỉnh / Thành phố</label>
+                    <label className="form-label">Tỉnh / Thành phố</label>
                     <select
                       required
                       value={newAddress.provinceId || ""}
@@ -385,16 +385,16 @@ export default function ProfilePage() {
                           client.get(`/address/districts?provinceId=${pid}`).then(res => setDistricts(res.data));
                         }
                       }}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                      className="form-input bg-white"
                     >
-                      <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                      <option value="">-- Chọn Tỉnh/TP --</option>
                       {provinces.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Quận / Huyện</label>
+                    <label className="form-label">Quận / Huyện</label>
                     <select
                       required
                       disabled={!newAddress.provinceId}
@@ -414,16 +414,16 @@ export default function ProfilePage() {
                           client.get(`/address/wards?districtId=${did}`).then(res => setWards(res.data));
                         }
                       }}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink disabled:bg-gray-100"
+                      className="form-input bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed"
                     >
-                      <option value="">-- Chọn Quận / Huyện --</option>
+                      <option value="">-- Chọn Quận/Huyện --</option>
                       {districts.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Phường / Xã</label>
+                    <label className="form-label">Phường / Xã</label>
                     <select
                       required
                       disabled={!newAddress.districtId}
@@ -437,9 +437,9 @@ export default function ProfilePage() {
                           wardName: name,
                         });
                       }}
-                      className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink disabled:bg-gray-100"
+                      className="form-input bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed"
                     >
-                      <option value="">-- Chọn Phường / Xã --</option>
+                      <option value="">-- Chọn Phường/Xã --</option>
                       {wards.map(w => (
                         <option key={w.code} value={w.code}>{w.name}</option>
                       ))}
@@ -450,15 +450,15 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={addressLoading}
-                  className="bg-ink text-substrate text-xs font-bold uppercase px-4 py-2.5 rounded-md hover:bg-hazard hover:text-white transition-colors cursor-pointer"
+                  className="btn btn-primary btn-sm"
                 >
-                  {addressLoading ? "Đang lưu..." : "Lưu địa chỉ"}
+                  {addressLoading ? "Đang gửi OTP..." : "Xác minh số điện thoại"}
                 </button>
               </form>
             )}
 
             {addresses.length === 0 ? (
-              <div className="text-center text-xs text-ink/40 py-10 font-semibold uppercase flex flex-col items-center gap-2">
+              <div className="text-center text-xs font-bold uppercase tracking-wider text-ink/40 py-10 flex flex-col items-center gap-2">
                 <AlertCircle className="w-8 h-8 text-ink/20" />
                 Chưa có địa chỉ nào được thiết lập.
               </div>
@@ -467,15 +467,15 @@ export default function ProfilePage() {
                 {addresses.map((a) => (
                   <div
                     key={a.id}
-                    className={`border p-4 rounded-lg flex justify-between items-start gap-4 transition-colors ${
-                      a.isDefault ? "bg-gray-50 border-ink/80" : "border-gray-200"
+                    className={`border p-4 rounded-xl flex justify-between items-start gap-4 transition-all duration-200 ${
+                      a.isDefault ? "bg-neutral-50/50 border-ink" : "border-gray-200 hover:border-gray-350"
                     }`}
                   >
                     <div className="space-y-1">
                       <div className="text-xs font-bold text-ink flex items-center gap-2">
                         {a.fullName} &bull; {a.phone}
                         {a.isDefault && (
-                          <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase">
+                          <span className="badge-premium badge-success">
                             Mặc định
                           </span>
                         )}
@@ -488,14 +488,14 @@ export default function ProfilePage() {
                       {!a.isDefault && (
                         <button
                           onClick={() => handleSetDefaultAddress(a.id)}
-                          className="text-[10px] font-bold text-ink hover:text-hazard transition-colors border border-gray-300 rounded px-2 py-1 bg-white cursor-pointer"
+                          className="btn btn-secondary btn-sm !py-1.5 !px-3 text-[10px]"
                         >
                           Mặc định
                         </button>
                       )}
                       <button
                         onClick={() => handleDeleteAddress(a.id)}
-                        className="text-gray-400 hover:text-hazard transition-colors p-1 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer"
+                        className="text-gray-450 hover:text-hazard transition-all p-2 border border-gray-200 rounded-lg hover:bg-neutral-50 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -509,31 +509,36 @@ export default function ProfilePage() {
       </div>
 
       {showOtpModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-xl animate-fadeIn">
             <div className="text-center space-y-1.5">
               <h3 className="text-sm font-black text-ink uppercase tracking-wider">Xác thực số điện thoại</h3>
-              <p className="text-xs text-ink/50 font-medium">
-                TechStore đã gửi một mã OTP gồm 6 chữ số để xác minh số điện thoại <strong>{newAddress.phone}</strong>.
+              <p className="text-xs text-ink/50 font-bold uppercase tracking-wider">
+                TechStore đã gửi một mã OTP để xác minh số điện thoại <strong className="text-ink font-mono">{newAddress.phone}</strong>.
               </p>
             </div>
 
             <form onSubmit={handleVerifyOtpAndSave} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-widest text-center">Mã OTP</label>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-widest text-center">Mã OTP (6 chữ số)</label>
                 <input
                   type="text"
                   maxLength={6}
                   required
-                  placeholder="Nhập mã OTP..."
+                  placeholder="MÃ OTP..."
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                  className="w-full text-center tracking-[12px] font-mono text-xl font-bold bg-white border border-gray-300 rounded-md py-3.5 outline-none focus:border-ink"
+                  className="w-full text-center tracking-[12px] font-mono text-xl font-black bg-neutral-50 border border-gray-300 rounded-md py-3 outline-none focus:bg-white focus:border-ink"
                 />
+                
+                {/* Visual tip for local execution */}
+                <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-[10px] text-hazard leading-normal font-bold uppercase text-center tracking-wide">
+                  💡 Vì đang chạy local, hãy kiểm tra mã OTP trong cửa sổ Terminal chạy Server.
+                </div>
               </div>
 
               {otpError && (
-                <p className="text-xs text-hazard font-semibold text-center">{otpError}</p>
+                <p className="text-xs text-hazard font-bold uppercase tracking-wider text-center">{otpError}</p>
               )}
 
               <div className="flex gap-3 pt-2">
@@ -544,14 +549,14 @@ export default function ProfilePage() {
                     setOtpCode("");
                     setOtpError(null);
                   }}
-                  className="flex-1 border border-gray-200 hover:bg-gray-50 text-ink text-xs font-bold py-3.5 rounded-md transition-colors cursor-pointer text-center uppercase"
+                  className="btn btn-secondary flex-1 btn-sm"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={otpLoading || otpCode.length < 6}
-                  className="flex-1 bg-ink text-substrate hover:bg-hazard hover:text-substrate text-xs font-bold py-3.5 rounded-md transition-colors disabled:bg-gray-100 disabled:text-ink/30 disabled:cursor-not-allowed uppercase"
+                  className="btn btn-primary flex-1 btn-sm"
                 >
                   {otpLoading ? "..." : "Xác nhận"}
                 </button>

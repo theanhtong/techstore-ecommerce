@@ -85,32 +85,32 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="p-8 max-w-lg mx-auto my-12 border border-gray-200 bg-white rounded-2xl space-y-6">
+    <div className="p-8 max-w-lg mx-auto my-12 border border-gray-200 bg-white rounded-2xl space-y-6 shadow-2xs animate-fadeIn">
       {/* Title */}
-      <div className="border-b border-gray-200 pb-5">
-        <span className="text-xs text-ink/50 uppercase tracking-widest font-mono">Cổng tài khoản</span>
-        <h1 className="text-2xl font-black text-ink mt-1">
+      <div className="border-b border-gray-150 pb-5">
+        <span className="text-xs text-ink/50 uppercase tracking-widest font-bold font-mono">Cổng tài khoản</span>
+        <h1 className="text-2xl font-black text-ink mt-1 uppercase">
           {isRegister ? "Đăng ký tài khoản" : "Đăng nhập hệ thống"}
         </h1>
       </div>
 
       {/* Verify Success Alert */}
       {verifySuccess && (
-        <div className="border border-emerald-200 bg-emerald-50 p-4 rounded-md text-xs text-emerald-800 font-semibold">
+        <div className="border border-emerald-200 bg-emerald-50 p-4 rounded-lg text-xs text-emerald-800 font-bold uppercase tracking-wider">
           {verifySuccess}
         </div>
       )}
 
       {/* Success Alert */}
       {successMsg && (
-        <div className="border border-emerald-200 bg-emerald-50 p-4 rounded-md text-xs text-emerald-800 font-semibold leading-relaxed">
+        <div className="border border-emerald-200 bg-emerald-50 p-4 rounded-lg text-xs text-emerald-800 font-bold uppercase tracking-wider leading-relaxed">
           {successMsg}
         </div>
       )}
 
       {/* Error Alert */}
       {errorMsg && (
-        <div className="border border-hazard/20 bg-hazard/5 p-4 rounded-md text-xs text-hazard font-semibold flex items-center gap-2">
+        <div className="border border-hazard/20 bg-hazard/5 p-4 rounded-lg text-xs text-hazard font-bold uppercase tracking-wider flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 flex-shrink-0" />
           {errorMsg}
         </div>
@@ -120,80 +120,84 @@ export default function AuthPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {isRegister && (
           <div>
-            <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">
+            <label className="form-label">
               Họ và tên
             </label>
             <div className="relative">
               <input
                 type="text"
                 placeholder="Nhập họ và tên..."
-                className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+                className="form-input bg-[#050505]/3"
+                style={{ paddingLeft: "2.5rem" }}
                 {...register("name", { required: "Họ và tên là bắt buộc" })}
               />
-              <User className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5" />
+              <User className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5 z-10" />
             </div>
             {errors.name && (
-              <p className="mt-1.5 text-xs text-hazard font-medium">{errors.name.message as string}</p>
+              <p className="mt-1.5 text-xs text-hazard font-bold uppercase tracking-wider">{errors.name.message as string}</p>
             )}
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">
+          <label className="form-label">
             Địa chỉ Email
           </label>
           <div className="relative">
             <input
               type="email"
               placeholder="example@gmail.com"
-              className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+              className="form-input bg-[#050505]/3"
+              style={{ paddingLeft: "2.5rem" }}
               {...register("email", { required: "Địa chỉ Email là bắt buộc" })}
             />
-            <Mail className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5" />
+            <Mail className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5 z-10" />
           </div>
           {errors.email && (
-            <p className="mt-1.5 text-xs text-hazard font-medium">{errors.email.message as string}</p>
+            <p className="mt-1.5 text-xs text-hazard font-bold uppercase tracking-wider">{errors.email.message as string}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">
+          <label className="form-label">
             Mật khẩu
           </label>
           <div className="relative">
             <input
               type="password"
               placeholder="••••••••"
-              className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+              className="form-input bg-[#050505]/3"
+              style={{ paddingLeft: "2.5rem" }}
               {...register("password", { required: "Mật khẩu là bắt buộc" })}
             />
-            <KeyRound className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5" />
+            <KeyRound className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5 z-10" />
           </div>
           {errors.password && (
-            <p className="mt-1.5 text-xs text-hazard font-medium">{errors.password.message as string}</p>
+            <p className="mt-1.5 text-xs text-hazard font-bold uppercase tracking-wider">{errors.password.message as string}</p>
           )}
         </div>
 
         {isRegister && (
           <div>
-            <label className="block text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">
+            <label className="form-label">
               Xác nhận mật khẩu
             </label>
             <div className="relative">
               <input
                 type="password"
                 placeholder="••••••••"
-                className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+                className="form-input bg-[#050505]/3"
+                style={{ paddingLeft: "2.5rem" }}
                 {...register("confirmPassword", {
                   required: "Xác nhận mật khẩu là bắt buộc",
                   validate: (value) =>
                     value === password || "Mật khẩu xác nhận không khớp",
                 })}
               />
-              <KeyRound className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5" />
+              <KeyRound className="w-4 h-4 text-ink/30 absolute left-3.5 top-3.5 z-10" />
             </div>
             {errors.confirmPassword && (
-              <p className="mt-1.5 text-xs text-hazard font-medium">{errors.confirmPassword.message as string}</p>
+              <p className="mt-1.5 text-xs text-hazard font-bold uppercase tracking-wider">{errors.confirmPassword.message as string}</p>
             )}
           </div>
         )}
@@ -201,7 +205,7 @@ export default function AuthPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-ink text-substrate font-bold uppercase py-3.5 rounded-md hover:bg-hazard hover:text-white transition-colors cursor-pointer text-xs"
+          className="btn btn-primary w-full btn-lg"
         >
           {loading ? "Đang xử lý..." : isRegister ? "Đăng ký" : "Đăng nhập"}
         </button>
@@ -217,7 +221,7 @@ export default function AuthPage() {
             setSuccessMsg(null);
             setVerifySuccess(null);
           }}
-          className="text-xs text-ink/60 hover:text-hazard font-semibold cursor-pointer"
+          className="text-xs text-ink/60 hover:text-hazard font-bold uppercase tracking-wider cursor-pointer"
         >
           {isRegister
             ? "Đã có tài khoản? Đăng nhập ngay"

@@ -73,12 +73,12 @@ export default function CatalogPage() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Title Header and Search Bar */}
-      <div className="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="border-b border-gray-150 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <span className="text-xs text-ink/50 uppercase tracking-widest font-mono">Danh mục</span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink mt-1">
+          <span className="text-xs text-ink/50 uppercase tracking-widest font-bold font-mono">Cửa hàng</span>
+          <h1 className="text-3xl font-black tracking-tight text-ink mt-1 uppercase">
             Tất cả sản phẩm
           </h1>
         </div>
@@ -94,9 +94,9 @@ export default function CatalogPage() {
               setSelectedCategory(null);
               setSelectedBrand(null);
             }}
-            className="w-full bg-[#050505]/5 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
+            className="w-full bg-[#050505]/3 border border-gray-300 rounded-md pl-10 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:border-ink transition-colors"
           />
-          <Search className="w-4 h-4 text-ink/40 absolute left-3 top-3.5" />
+          <Search className="w-4 h-4 text-ink/40 absolute left-3.5 top-3.5" />
         </div>
       </div>
 
@@ -104,15 +104,15 @@ export default function CatalogPage() {
         {/* Filter Side Panel */}
         <div className="space-y-6">
           {/* Categories select checklist */}
-          <div className="border border-gray-200 rounded-lg p-5 bg-white">
-            <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+          <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-2xs">
+            <h3 className="text-[11px] font-extrabold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
               <Tag className="w-4 h-4 text-hazard" />
               Danh mục sản phẩm
             </h3>
-            <div className="space-y-2.5 text-sm">
+            <div className="space-y-2.5 text-xs font-bold uppercase tracking-wider">
               <button
                 onClick={() => setSelectedCategory(null)}
-                className={`block w-full text-left cursor-pointer transition-colors ${selectedCategory === null ? "text-hazard font-semibold" : "text-ink/60 hover:text-ink"
+                className={`block w-full text-left cursor-pointer transition-colors ${selectedCategory === null ? "text-hazard font-black" : "text-ink/60 hover:text-ink"
                   }`}
               >
                 Tất cả danh mục
@@ -121,7 +121,7 @@ export default function CatalogPage() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`block w-full text-left cursor-pointer transition-colors ${selectedCategory === c.id ? "text-hazard font-semibold" : "text-ink/60 hover:text-ink"
+                  className={`block w-full text-left cursor-pointer transition-colors ${selectedCategory === c.id ? "text-hazard font-black" : "text-ink/60 hover:text-ink"
                     }`}
                 >
                   {c.name}
@@ -131,15 +131,15 @@ export default function CatalogPage() {
           </div>
 
           {/* Brands list checklist */}
-          <div className="border border-gray-200 rounded-lg p-5 bg-white">
-            <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+          <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-2xs">
+            <h3 className="text-[11px] font-extrabold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-hazard" />
               Thương hiệu
             </h3>
-            <div className="space-y-2.5 text-sm">
+            <div className="space-y-2.5 text-xs font-bold uppercase tracking-wider">
               <button
                 onClick={() => setSelectedBrand(null)}
-                className={`block w-full text-left cursor-pointer transition-colors ${selectedBrand === null ? "text-hazard font-semibold" : "text-ink/60 hover:text-ink"
+                className={`block w-full text-left cursor-pointer transition-colors ${selectedBrand === null ? "text-hazard font-black" : "text-ink/60 hover:text-ink"
                   }`}
               >
                 Tất cả thương hiệu
@@ -148,7 +148,7 @@ export default function CatalogPage() {
                 <button
                   key={b.id}
                   onClick={() => setSelectedBrand(b.id)}
-                  className={`block w-full text-left cursor-pointer transition-colors ${selectedBrand === b.id ? "text-hazard font-semibold" : "text-ink/60 hover:text-ink"
+                  className={`block w-full text-left cursor-pointer transition-colors ${selectedBrand === b.id ? "text-hazard font-black" : "text-ink/60 hover:text-ink"
                     }`}
                 >
                   {b.name}
@@ -164,7 +164,7 @@ export default function CatalogPage() {
                 setSelectedCategory(null);
                 setSelectedBrand(null);
               }}
-              className="w-full bg-gray-100 hover:bg-ink hover:text-substrate text-center text-xs font-bold py-3 rounded-md transition-colors uppercase cursor-pointer"
+              className="btn btn-secondary w-full btn-sm"
             >
               Xóa bộ lọc
             </button>
@@ -174,17 +174,17 @@ export default function CatalogPage() {
         {/* Product Cards Grid Column */}
         <div className="md:col-span-3">
           {isLoading ? (
-            <div className="border border-gray-200 rounded-lg p-12 text-center bg-white font-medium text-ink/60 flex items-center justify-center gap-2">
+            <div className="border border-gray-200 rounded-xl p-12 text-center bg-white font-medium text-ink/60 flex items-center justify-center gap-2">
               <span className="animate-spin rounded-full h-4 w-4 border-2 border-ink border-t-transparent"></span>
               Đang tải danh sách sản phẩm...
             </div>
           ) : error ? (
-            <div className="border border-hazard/20 bg-hazard/5 p-6 rounded-lg text-sm text-hazard flex items-center gap-2">
+            <div className="border border-hazard/20 bg-hazard/5 p-6 rounded-xl text-xs font-bold uppercase tracking-wider text-hazard flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
               Không thể tải danh sách sản phẩm. Vui lòng thử lại.
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="border border-gray-200 rounded-lg p-12 text-center text-sm text-ink/40">
+            <div className="border border-gray-200 rounded-xl p-12 text-center text-xs font-bold uppercase tracking-wider text-ink/40">
               Không tìm thấy sản phẩm nào phù hợp với bộ lọc hiện tại.
             </div>
           ) : (
@@ -202,16 +202,16 @@ export default function CatalogPage() {
                     <Link
                       key={v.id}
                       to={`/product/${p.id}?variant=${v.id}`}
-                      className="group bg-white border border-gray-200 hover:border-gray-400 rounded-lg p-5 flex flex-col justify-between hover:shadow-sm transition-all duration-200 relative"
+                      className="group bg-white border border-gray-200 hover:border-ink rounded-xl p-5 flex flex-col justify-between hover:shadow-sm transition-all duration-200 relative"
                     >
                       <div>
                         {/* Image Frame */}
-                        <div className="aspect-square bg-gray-50 rounded-md border border-gray-100 mb-4 flex items-center justify-center overflow-hidden">
+                        <div className="aspect-square bg-neutral-50 rounded-lg border border-neutral-100 mb-4 flex items-center justify-center overflow-hidden">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
                               alt={displayName}
-                              className="object-contain w-full h-full p-4 group-hover:scale-105 transition-transform duration-300"
+                              className="object-contain w-full h-full p-4 group-hover:scale-[1.03] transition-transform duration-300"
                             />
                           ) : (
                             <span className="text-xs text-ink/30 font-medium">Không có hình ảnh</span>
@@ -220,8 +220,8 @@ export default function CatalogPage() {
 
                         {/* Info tags */}
                         <div className="flex justify-between items-center gap-2 mb-2 text-[10px] text-ink/40 font-bold uppercase tracking-wider">
-                          <div>{p.brand?.name || "GENERIC"}</div>
-                          <div>{p.category?.name || "UNCLASSIFIED"}</div>
+                          <div>{p.brand?.name || "Thương hiệu khác"}</div>
+                          <div>{p.category?.name || "Chưa phân loại"}</div>
                         </div>
 
                         {/* Name */}
@@ -231,7 +231,7 @@ export default function CatalogPage() {
 
                         {/* Active Campaign banner */}
                         {p.campaign?.description && (
-                          <div className="mb-4 bg-rose-50 border border-rose-100 rounded px-2.5 py-1 text-[11px] text-hazard font-semibold leading-normal">
+                          <div className="mb-4 bg-rose-50 border border-rose-100 rounded px-2.5 py-1 text-[10px] text-hazard font-bold uppercase tracking-wider">
                             Khuyến mãi: {p.campaign.description}
                           </div>
                         )}
@@ -243,15 +243,15 @@ export default function CatalogPage() {
                         <div>
                           {hasDiscount ? (
                             <div className="text-right">
-                              <div className="text-[11px] line-through text-ink/40 font-medium">
+                              <div className="text-[10px] line-through text-ink/40 font-medium">
                                 {formatPrice(v.price)}
                               </div>
-                              <div className="text-sm font-bold text-hazard">
+                              <div className="text-sm font-black text-hazard">
                                 {formatPrice(v.salePrice!)}
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm font-bold text-ink">
+                            <div className="text-sm font-black text-ink">
                               {formatPrice(v.price)}
                             </div>
                           )}

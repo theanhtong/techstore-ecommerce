@@ -108,8 +108,8 @@ export default function NotificationDropdown() {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 hover:text-hazard transition-colors cursor-pointer text-sm font-medium ${
-          isOpen ? "text-hazard font-semibold" : "text-ink/70"
+        className={`flex items-center gap-1.5 hover:text-hazard transition-all duration-200 uppercase text-xs font-bold tracking-wider cursor-pointer ${
+          isOpen ? "text-hazard" : "text-ink/75"
         }`}
         aria-label="Toggle notifications"
       >
@@ -119,7 +119,7 @@ export default function NotificationDropdown() {
             <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-hazard animate-pulse" />
           )}
         </div>
-        <span>Thông báo {unreadCount > 0 && `(${unreadCount})`}</span>
+        <span>Thông báo {unreadCount > 0 ? `(${unreadCount})` : ""}</span>
       </button>
 
       {/* Dropdown Popover */}

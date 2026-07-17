@@ -211,27 +211,27 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Title */}
-      <div className="border-b border-gray-200 pb-6">
-        <span className="text-xs text-ink/50 uppercase tracking-widest font-mono">Tài khoản</span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink mt-1">
+      <div className="border-b border-gray-150 pb-6">
+        <span className="text-xs text-ink/50 uppercase tracking-widest font-bold font-mono">Tài khoản</span>
+        <h1 className="text-3xl font-black tracking-tight text-ink mt-1 uppercase">
           Lịch sử mua hàng
         </h1>
       </div>
 
       {isLoading ? (
-        <div className="border border-gray-200 rounded-lg p-12 text-center bg-white font-medium text-ink/60 flex items-center justify-center gap-2">
+        <div className="border border-gray-200 rounded-xl p-12 text-center bg-white font-medium text-ink/60 flex items-center justify-center gap-2">
           <span className="animate-spin rounded-full h-4 w-4 border-2 border-ink border-t-transparent"></span>
           Đang tải danh sách đơn hàng...
         </div>
       ) : error ? (
-        <div className="border border-hazard/20 bg-hazard/5 p-6 rounded-lg text-sm text-hazard flex items-center gap-2">
+        <div className="border border-hazard/20 bg-hazard/5 p-6 rounded-xl text-xs font-bold uppercase tracking-wider text-hazard flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           Lỗi: Không thể đồng bộ lịch sử mua hàng của bạn.
         </div>
       ) : orders.length === 0 ? (
-        <div className="border border-gray-200 rounded-lg p-12 text-center text-sm text-ink/40">
+        <div className="border border-gray-200 rounded-xl p-12 text-center text-xs font-bold uppercase tracking-wider text-ink/40">
           Bạn chưa thực hiện bất kỳ giao dịch nào.
         </div>
       ) : (
@@ -241,76 +241,76 @@ export default function OrdersPage() {
             const isPaymentPending = order.payment?.status === "PENDING" && order.payment?.method === "VNPAY";
 
             return (
-              <div key={order.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden hover:shadow-xs transition-shadow">
+              <div key={order.id} className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-2xs hover:shadow-xs transition-shadow">
                 {/* Header info */}
-                <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50">
-                  <div className="text-xs">
-                    <span className="text-ink/50 uppercase font-bold tracking-wider">Mã đơn</span>{" "}
-                    <span className="font-bold text-ink">#{order.orderNumber}</span>
+                <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-neutral-50/50">
+                  <div className="text-xs font-bold text-ink/60 uppercase tracking-wider">
+                    <span>Mã đơn: </span>
+                    <span className="text-ink font-mono font-black">#{order.orderNumber}</span>
                     <span className="text-gray-300 mx-2.5">|</span>
-                    <span className="text-ink/60">{new Date(order.createdAt).toISOString().slice(0, 10)}</span>
+                    <span className="font-mono">{new Date(order.createdAt).toISOString().slice(0, 10)}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className={`px-2.5 py-1 border text-[11px] font-bold rounded-md uppercase ${getStatusColorClass(order.status)}`}>
+                    <span className={`px-2.5 py-1 border text-[10px] font-bold rounded-md uppercase tracking-wider ${getStatusColorClass(order.status)}`}>
                       {getStatusLabel(order.status)}
                     </span>
                     <button
                       onClick={() => setActiveModalId(order.id)}
-                      className="text-xs font-bold text-hazard hover:underline uppercase cursor-pointer flex items-center gap-1"
+                      className="text-xs font-bold text-hazard hover:underline uppercase tracking-wider cursor-pointer flex items-center gap-1"
                     >
                       <Info className="w-3.5 h-3.5" />
-                      Xem chi tiết
+                      Chi tiết
                     </button>
                   </div>
                 </div>
 
                 {/* Short items brief */}
                 <div className="px-6 py-6 space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3.5">
                     {order.items.map((item) => {
                       const snapshot = item.variantSnapshot || ({} as any);
                       const displayName = snapshot.productName || "Sản phẩm";
                       const displayPrice = item.unitPrice || snapshot.salePrice || snapshot.price || 0;
                       return (
-                        <div key={item.id} className="flex justify-between items-center text-sm gap-4">
+                        <div key={item.id} className="flex justify-between items-center text-xs gap-4">
                           <div className="flex items-center gap-2.5 min-w-0">
                             {snapshot.imageUrl && (
                               <img
                                 src={snapshot.imageUrl}
                                 alt={displayName}
-                                className="w-8 h-8 object-cover rounded-md border border-gray-100 flex-shrink-0"
+                                className="w-8 h-8 object-contain rounded-md border border-neutral-150 p-0.5 flex-shrink-0 bg-neutral-50"
                               />
                             )}
-                            <span className="text-ink/75 truncate font-medium">
-                              {displayName} {snapshot.color ? `(${snapshot.color})` : ""} <span className="text-ink/40 font-medium">x{item.quantity}</span>
+                            <span className="text-ink/80 truncate font-semibold">
+                              {displayName} {snapshot.color ? `(${snapshot.color})` : ""} <span className="text-ink/40 font-bold">x{item.quantity}</span>
                             </span>
                           </div>
-                          <span className="font-semibold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
+                          <span className="font-bold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
                         </div>
                       );
                     })}
                   </div>
 
                   <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="text-xs text-ink/50">
-                      Thanh toán: <span className="font-semibold text-ink">{getPaymentMethodLabel(order.payment?.method || "COD")}</span> &bull; Trạng thái:{" "}
+                    <div className="text-[10px] text-ink/50 font-bold uppercase tracking-wider">
+                      Thanh toán: <span className="text-ink">{getPaymentMethodLabel(order.payment?.method || "COD")}</span> &bull; Trạng thái:{" "}
                       <span className={getPaymentStatusClass(order.payment?.status || "PENDING")}>
                         {getPaymentStatusLabel(order.payment?.status || "PENDING")}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="text-sm font-medium text-ink">
-                        Tổng tiền: <span className="font-bold text-hazard text-base">{formatPrice(order.total)}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="text-xs font-bold text-ink uppercase tracking-wider">
+                        Tổng tiền: <span className="font-black text-hazard text-base ml-1">{formatPrice(order.total)}</span>
                       </div>
 
                       {/* Cancel order button */}
                       {isCancellable && (
                         <button
                           onClick={() => setCancellingOrderId(order.id)}
-                          className="border border-hazard text-hazard hover:bg-hazard hover:text-substrate px-3.5 py-2 rounded-md text-[11px] font-bold uppercase transition-colors cursor-pointer"
+                          className="btn btn-secondary btn-sm"
                         >
-                          Hủy đơn hàng
+                          Hủy đơn
                         </button>
                       )}
 
@@ -324,7 +324,7 @@ export default function OrdersPage() {
                             })
                           }
                           disabled={retryPaymentMutation.isPending}
-                          className="bg-hazard text-substrate hover:bg-ink px-3.5 py-2 rounded-md text-[11px] font-bold uppercase transition-colors cursor-pointer"
+                          className="btn btn-primary btn-sm"
                         >
                           {retryPaymentMutation.isPending ? "..." : "Thanh toán lại"}
                         </button>
@@ -340,21 +340,21 @@ export default function OrdersPage() {
 
       {/* Overlay Modal for Order details */}
       {activeModalId && (
-        <div className="fixed inset-0 z-50 bg-[#000000]/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl max-w-2xl w-full max-h-[85dvh] overflow-y-auto p-6 relative shadow-lg animate-fadeIn flex flex-col justify-between">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-2xl w-full max-h-[85dvh] overflow-y-auto p-6 relative shadow-xl animate-fadeIn flex flex-col justify-between">
             {/* Close trigger */}
             <button
               onClick={() => {
                 setActiveModalId(null);
                 setExpandedTracking({});
               }}
-              className="absolute right-4 top-4 hover:bg-gray-100 p-1.5 rounded-full cursor-pointer transition-colors"
+              className="absolute right-4 top-4 hover:bg-neutral-50 p-1.5 rounded-full cursor-pointer transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-gray-400" />
             </button>
 
             {detailsLoading || !activeOrderDetails ? (
-              <div className="py-12 text-center font-medium text-ink/60 flex items-center justify-center gap-2">
+              <div className="py-12 text-center font-medium text-ink/65 flex items-center justify-center gap-2">
                 <span className="animate-spin rounded-full h-4.5 w-4.5 border-2 border-ink border-t-transparent"></span>
                 Đang tải chi tiết đơn hàng...
               </div>
@@ -362,27 +362,27 @@ export default function OrdersPage() {
               <div className="space-y-6">
                 {/* Header */}
                 <div>
-                  <h3 className="text-lg font-bold text-ink flex items-center gap-1.5">
+                  <h3 className="text-base font-black text-ink uppercase tracking-wider flex items-center gap-1.5">
                     <Package className="w-5 h-5 text-hazard" />
                     Chi tiết đơn hàng #{activeOrderDetails.orderNumber}
                   </h3>
-                  <div className="text-xs text-ink/50 mt-1 flex items-center gap-1">
+                  <div className="text-xs text-ink/50 mt-1 flex items-center gap-1 font-bold uppercase tracking-wider">
                     <Calendar className="w-3.5 h-3.5" />
-                    Ngày tạo đơn: {new Date(activeOrderDetails.createdAt).toLocaleString("vi-VN")}
+                    Ngày tạo: {new Date(activeOrderDetails.createdAt).toLocaleString("vi-VN")}
                   </div>
                 </div>
 
                 {/* Status bar */}
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-ink/40 uppercase tracking-wider">Trạng thái:</span>
-                  <span className={`px-2.5 py-1 border text-[11px] font-bold rounded-md uppercase ${getStatusColorClass(activeOrderDetails.status)}`}>
+                  <span className="text-[10px] font-bold text-ink/40 uppercase tracking-widest">Trạng thái:</span>
+                  <span className={`px-2.5 py-1 border text-[10px] font-bold rounded-md uppercase tracking-wider ${getStatusColorClass(activeOrderDetails.status)}`}>
                     {getStatusLabel(activeOrderDetails.status)}
                   </span>
                 </div>
 
                 {/* Items List */}
                 <div className="space-y-3.5">
-                  <h4 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-1.5">
+                  <h4 className="text-[10px] font-bold text-ink/40 uppercase tracking-widest border-b border-gray-100 pb-1.5">
                     Danh sách sản phẩm
                   </h4>
                   <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
@@ -397,21 +397,21 @@ export default function OrdersPage() {
                               <img
                                 src={snapshot.imageUrl}
                                 alt={displayName}
-                                className="w-7 h-7 object-cover rounded border border-gray-100 flex-shrink-0"
+                                className="w-8 h-8 object-contain rounded border border-gray-100 p-0.5 bg-neutral-50 flex-shrink-0"
                               />
                             )}
-                            <span className="text-ink/85 font-medium leading-tight truncate">
+                            <span className="text-ink/85 font-semibold leading-tight truncate">
                               {displayName} {snapshot.color ? `(${snapshot.color})` : ""} <span className="text-ink/45">x{item.quantity}</span>
                             </span>
                           </div>
-                          <span className="font-semibold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
+                          <span className="font-bold text-ink flex-shrink-0">{formatPrice(Number(displayPrice) * item.quantity)}</span>
                         </div>
                       );
                     })}
                   </div>
                   {/* Coupon Details */}
                   {activeOrderDetails.coupon && (
-                    <div className="flex justify-between text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-100 rounded p-2.5">
+                    <div className="flex justify-between text-xs text-emerald-700 font-bold uppercase tracking-wider bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
                       <span>Mã giảm giá đã áp dụng: {activeOrderDetails.coupon.code}</span>
                       <span>
                         -{activeOrderDetails.coupon.discountType === "PERCENT"
@@ -421,14 +421,14 @@ export default function OrdersPage() {
                     </div>
                   )}
                   {/* Total sums */}
-                  <div className="flex justify-between pt-3 border-t border-gray-100 font-bold text-xs">
-                    <span className="text-ink/65 uppercase tracking-wider">Tổng tiền thanh toán</span>
+                  <div className="flex justify-between pt-3 border-t border-gray-150 font-bold text-xs">
+                    <span className="text-ink/50 uppercase tracking-widest">Tổng thanh toán</span>
                     <span className="text-hazard text-base font-black">{formatPrice(activeOrderDetails.total)}</span>
                   </div>
                 </div>
 
                 {/* Invoice and Shipment details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-ink/75 border-t border-gray-100 pt-4 leading-relaxed">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-ink/75 border-t border-gray-100 pt-4 leading-relaxed font-semibold">
                   <div>
                     <h5 className="font-bold text-ink uppercase tracking-wider mb-2">Thanh toán</h5>
                     <div>Hình thức: {getPaymentMethodLabel(activeOrderDetails.payment?.method || "COD")}</div>
@@ -436,14 +436,14 @@ export default function OrdersPage() {
                   </div>
                   {activeOrderDetails.notes && (
                     <div>
-                      <h5 className="font-bold text-ink uppercase tracking-wider mb-2">Ghi chú nhận hàng</h5>
+                      <h5 className="font-bold text-ink uppercase tracking-wider mb-2">Ghi chú đơn hàng</h5>
                       <div className="italic text-ink/70">"{activeOrderDetails.notes}"</div>
                     </div>
                   )}
                   {activeOrderDetails.status === "CANCELLED" && activeOrderDetails.cancelReason && (
-                    <div className="col-span-1 md:col-span-2 bg-rose-50 border border-rose-100 rounded-lg p-3 text-rose-800">
-                      <span className="font-bold uppercase text-[10px] block mb-1">Lý do hủy đơn hàng:</span>
-                      <p className="font-semibold text-xs">{activeOrderDetails.cancelReason}</p>
+                    <div className="col-span-1 md:col-span-2 bg-rose-50 border border-rose-100 rounded-xl p-4 text-rose-800">
+                      <span className="font-bold uppercase text-[10px] tracking-wider block mb-1">Lý do hủy đơn hàng:</span>
+                      <p className="font-bold text-xs">{activeOrderDetails.cancelReason}</p>
                     </div>
                   )}
                 </div>
@@ -451,7 +451,7 @@ export default function OrdersPage() {
                 {/* GHN Shipment progress log */}
                 {activeOrderDetails.shipment && (
                   <div className="space-y-3.5 border-t border-gray-100 pt-4">
-                    <h4 className="text-xs font-bold text-ink uppercase tracking-wider pb-1.5 flex justify-between items-center">
+                    <h4 className="text-[10px] font-bold text-ink/40 uppercase tracking-widest pb-1.5 flex justify-between items-center">
                       <span className="flex items-center gap-1.5">
                         <Truck className="w-4 h-4 text-hazard" />
                         Tiến trình vận chuyển
@@ -460,24 +460,24 @@ export default function OrdersPage() {
                         activeOrderDetails.shipment.trackingHistory.length > 0 && (
                           <button
                             onClick={() => toggleTrackingDetails(activeOrderDetails.shipment!.id)}
-                            className="text-hazard hover:underline cursor-pointer font-bold text-[10px] uppercase"
+                            className="text-hazard hover:underline cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                           >
                             {expandedTracking[activeOrderDetails.shipment!.id]
                               ? "Thu gọn log"
-                              : "Hiện lịch sử di chuyển"}
+                              : "Hiện lịch sử"}
                           </button>
                         )}
                     </h4>
 
-                    <div className="text-xs text-ink/80 flex flex-wrap gap-x-4">
-                      <div>Đơn vị vận chuyển: <span className="font-semibold text-ink uppercase">{activeOrderDetails.shipment.provider}</span></div>
-                      <div>Mã vận đơn: <span className="font-semibold text-ink">{activeOrderDetails.shipment.trackingNumber || "Chưa phát hành"}</span></div>
+                    <div className="text-xs text-ink/80 flex flex-wrap gap-x-4 font-semibold uppercase tracking-wider">
+                      <div>Đơn vị: <span className="font-bold text-ink uppercase">{activeOrderDetails.shipment.provider}</span></div>
+                      <div>Mã vận đơn: <span className="font-bold text-ink font-mono">{activeOrderDetails.shipment.trackingNumber || "Chưa phát hành"}</span></div>
                     </div>
 
                     {/* Detailed history records inside modal */}
                     {expandedTracking[activeOrderDetails.shipment.id] &&
                       activeOrderDetails.shipment.trackingHistory && (
-                        <div className="border border-gray-100 rounded-lg bg-gray-50 p-4 space-y-2.5 max-h-40 overflow-y-auto">
+                        <div className="border border-gray-100 rounded-xl bg-neutral-50 p-4 space-y-2.5 max-h-40 overflow-y-auto">
                           {activeOrderDetails.shipment.trackingHistory.map((history: any) => (
                             <div key={history.id} className="flex gap-4 text-[11px] leading-snug">
                               <span className="text-ink/40 font-mono flex-shrink-0">
@@ -498,9 +498,9 @@ export default function OrdersPage() {
       )}
       {/* Cancellation modal dialog */}
       {cancellingOrderId && (
-        <div className="fixed inset-0 z-[100] bg-[#000000]/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 relative shadow-lg animate-fadeIn space-y-4 text-xs font-semibold">
-            <h3 className="text-sm font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 relative shadow-xl animate-fadeIn space-y-4 text-xs font-bold uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-2">
               Lý do hủy đơn hàng
             </h3>
             
@@ -512,7 +512,7 @@ export default function OrdersPage() {
                 <select
                   value={cancelReasonOption}
                   onChange={(e) => setCancelReasonOption(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink"
+                  className="form-input bg-white"
                 >
                   <option value="Thay đổi ý định mua sắm">Thay đổi ý định mua sắm</option>
                   <option value="Tìm thấy giá rẻ hơn ở nơi khác">Tìm thấy giá rẻ hơn ở nơi khác</option>
@@ -532,7 +532,7 @@ export default function OrdersPage() {
                     placeholder="Vui lòng cho biết lý do của bạn..."
                     value={cancelReasonCustom}
                     onChange={(e) => setCancelReasonCustom(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-md p-3 text-xs outline-none focus:border-ink"
+                    className="form-input bg-white normal-case font-medium"
                     required
                   />
                 </div>
@@ -547,7 +547,7 @@ export default function OrdersPage() {
                   setCancelReasonOption("Thay đổi ý định mua sắm");
                   setCancelReasonCustom("");
                 }}
-                className="bg-gray-100 text-ink text-xs font-bold px-4 py-2 rounded-md hover:bg-gray-200 cursor-pointer"
+                className="btn btn-secondary btn-sm"
               >
                 Hủy bỏ
               </button>
@@ -562,7 +562,7 @@ export default function OrdersPage() {
                   }
                   cancelOrderMutation.mutate({ orderId: cancellingOrderId, reason: finalReason });
                 }}
-                className="bg-rose-600 text-white hover:bg-rose-700 text-xs font-bold px-4 py-2 rounded-md transition-colors cursor-pointer"
+                className="btn btn-danger btn-sm"
               >
                 {cancelOrderMutation.isPending ? "Đang xử lý..." : "Xác nhận hủy"}
               </button>

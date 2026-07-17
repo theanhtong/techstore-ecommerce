@@ -14,19 +14,49 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('=== STARTING DATABASE SEEDING ===');
 
+  try {
+    const userCount = await prisma.user.count();
+    const productCount = await prisma.product.count();
+    if (userCount > 0 && productCount > 0) {
+      console.log('=== DATABASE ALREADY SEEDED. SKIPPING ===');
+      return;
+    }
+  } catch (e) {
+    console.log('No existing schema or data found. Starting fresh seed...');
+  }
+
   // 1. Clean existing database records
   console.log('Cleaning up existing database records...');
-  await prisma.$executeRawUnsafe(`
-    TRUNCATE TABLE 
+  try {
+    const existingTablesResult = await prisma.$queryRawUnsafe<{ table_name: string }[]>(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    
+    const dbTables = existingTablesResult.map(r => r.table_name);
+    const tableNames = [
       "users", "addresses", "categories", "brands", "products", "product_variants", 
       "product_images", "inventories", "carts", "cart_items", "orders", "order_items", 
       "payments", "shipments", "shipment_trackings", "reviews", "review_replies", 
       "campaigns", "promotions", "promotion_products", "coupons", "coupon_usages", 
       "wishlists", "notifications", "audit_logs", "sessions", "email_verifications", 
-      "phone_verifications" 
-    CASCADE;
-  `);
-  console.log('✓ Cleanup complete.');
+      "phone_verifications"
+    ];
+    
+    const tablesToTruncate = tableNames
+      .filter(t => dbTables.includes(t))
+      .map(t => `"${t}"`);
+      
+    if (tablesToTruncate.length > 0) {
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tablesToTruncate.join(', ')} CASCADE;`);
+      console.log('✓ Cleanup complete.');
+    } else {
+      console.log('No tables found to clean.');
+    }
+  } catch (err) {
+    console.log('Error during database cleanup:', err);
+  }
 
   // 2. Create Users
   console.log('Creating users...');

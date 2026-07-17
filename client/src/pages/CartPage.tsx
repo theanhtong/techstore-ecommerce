@@ -110,12 +110,12 @@ export default function CartPage() {
   const finalAmount = Math.max(selectedSubtotal - discountAmount, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Header breadcrumbs */}
-      <div className="border-b border-gray-200 pb-6 flex items-center justify-between">
+      <div className="border-b border-gray-150 pb-6 flex items-center justify-between">
         <div>
-          <span className="text-xs text-ink/50 uppercase tracking-widest font-mono">Giỏ hàng</span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink mt-1">
+          <span className="text-xs text-ink/50 uppercase tracking-widest font-bold font-mono">Giỏ hàng</span>
+          <h1 className="text-3xl font-black tracking-tight text-ink mt-1 uppercase">
             Chi tiết giỏ hàng
           </h1>
         </div>
@@ -124,7 +124,7 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Left Column: Cart Items List */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6">
+          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6 shadow-2xs">
             {/* Select All Checkbox */}
             <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
               <input
@@ -137,10 +137,10 @@ export default function CartPage() {
                     setSelectedItemIds([]);
                   }
                 }}
-                className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-300 cursor-pointer"
+                className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-350 cursor-pointer"
               />
               <span 
-                className="text-xs font-bold text-ink/70 uppercase tracking-wider select-none cursor-pointer"
+                className="text-xs font-bold text-ink/60 uppercase tracking-wider select-none cursor-pointer hover:text-ink transition-colors"
                 onClick={() => {
                   if (selectedItemIds.length === items.length) {
                     setSelectedItemIds([]);
@@ -166,24 +166,24 @@ export default function CartPage() {
                         setSelectedItemIds(selectedItemIds.filter((id) => id !== item.id));
                       }
                     }}
-                    className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-300 cursor-pointer"
+                    className="w-4 h-4 rounded text-hazard focus:ring-hazard border-gray-350 cursor-pointer"
                   />
                   {/* Image */}
-                  <div className="w-20 h-20 bg-gray-50 border border-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                  <div className="w-20 h-20 bg-neutral-50 border border-neutral-100 rounded-lg flex items-center justify-center overflow-hidden">
                     {item.variant?.images?.[0]?.url ? (
                       <img src={item.variant.images[0].url} alt={item.variant.product?.name} className="object-contain p-2 w-full h-full" />
                     ) : (
-                      <span className="text-[10px] text-ink/30 font-medium">No Image</span>
+                      <span className="text-[10px] text-ink/30 font-medium">N/A</span>
                     )}
                   </div>
                 </div>
 
                 {/* Details info */}
                 <div className="flex-1 space-y-1">
-                  <div className="text-[10px] text-ink/40 font-mono uppercase">{item.variant?.sku}</div>
+                  <div className="text-[10px] text-ink/40 font-mono uppercase font-bold">{item.variant?.sku}</div>
                   <h4 className="font-bold text-sm text-ink leading-tight">{item.variant?.product?.name}</h4>
                   <div>
-                    <span className="text-xs text-hazard font-bold">
+                    <span className="text-xs text-hazard font-black">
                       {formatPrice(item.effectivePrice)}
                     </span>
                   </div>
@@ -191,24 +191,24 @@ export default function CartPage() {
 
                 {/* Quantity select */}
                 <div className="flex items-center gap-4 flex-shrink-0 justify-between sm:justify-start">
-                  <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                  <div className="flex items-center border border-gray-300 rounded-md bg-white overflow-hidden">
                     <button
                       onClick={() => updateItemQuantity(item.id, Math.max(1, item.quantity - 1))}
-                      className="px-2.5 py-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="px-2.5 py-1.5 hover:bg-neutral-50 transition-colors cursor-pointer text-xs font-bold text-ink"
                     >
-                      <Minus className="w-3.5 h-3.5 text-ink/75" />
+                      <Minus className="w-3 h-3 text-ink/75" />
                     </button>
-                    <span className="px-3 text-xs font-bold text-ink">{item.quantity}</span>
+                    <span className="px-3 text-xs font-black text-ink select-none">{item.quantity}</span>
                     <button
                       onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
-                      className="px-2.5 py-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="px-2.5 py-1.5 hover:bg-neutral-50 transition-colors cursor-pointer text-xs font-bold text-ink"
                     >
-                      <Plus className="w-3.5 h-3.5 text-ink/75" />
+                      <Plus className="w-3 h-3 text-ink/75" />
                     </button>
                   </div>
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="text-gray-400 hover:text-hazard transition-colors cursor-pointer p-1.5 hover:bg-gray-50 rounded"
+                    className="text-gray-400 hover:text-hazard transition-all cursor-pointer p-2 hover:bg-neutral-50 rounded-lg border border-transparent hover:border-gray-200"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -220,27 +220,27 @@ export default function CartPage() {
 
         {/* Right Column: Checkout Invoice */}
         <div className="space-y-6">
-          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6">
+          <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-6 shadow-2xs">
             <h3 className="text-xs font-bold text-ink uppercase tracking-wider border-b border-gray-100 pb-3">
               Tóm tắt đơn hàng
             </h3>
 
             {/* Calculations VND details */}
-            <div className="space-y-4 text-xs font-medium text-ink uppercase pb-6 border-b border-gray-100">
+            <div className="space-y-4 text-xs font-bold uppercase tracking-wider text-ink pb-6 border-b border-gray-100">
               <div className="flex justify-between">
-                <span className="text-ink/50">Tạm tính</span>
-                <span className="font-semibold text-ink">{formatPrice(selectedSubtotal)}</span>
+                <span className="text-ink/45">Tạm tính</span>
+                <span className="font-bold text-ink">{formatPrice(selectedSubtotal)}</span>
               </div>
 
               {couponResult && (
-                <div className="flex justify-between text-emerald-600 font-semibold normal-case">
+                <div className="flex justify-between text-emerald-600 font-bold">
                   <span>Giảm giá ({couponCode})</span>
                   <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-sm font-bold text-ink pt-2">
-                <span>Tổng cộng</span>
+              <div className="flex justify-between text-sm font-black text-ink pt-2 border-t border-gray-100">
+                <span>Tổng thanh toán</span>
                 <span className="text-hazard text-base font-black">{formatPrice(finalAmount)}</span>
               </div>
             </div>
@@ -248,22 +248,22 @@ export default function CartPage() {
             {/* Promo Code check box */}
             {user && (
               <div className="space-y-3">
-                <label className="block text-xs font-bold text-ink/50 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-ink/40 uppercase tracking-widest">
                   Mã giảm giá
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Mã KM..."
+                    placeholder="MÃ GIẢM GIÁ..."
                     value={couponCode}
                     disabled={!!couponResult}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-xs outline-none focus:border-ink uppercase"
+                    className="form-input flex-1 bg-white"
                   />
                   {couponResult ? (
                     <button
                       onClick={clearCoupon}
-                      className="bg-gray-200 text-ink text-xs font-bold px-4 py-2 rounded-md hover:bg-gray-300 cursor-pointer"
+                      className="btn btn-secondary btn-sm"
                     >
                       Hủy
                     </button>
@@ -271,18 +271,18 @@ export default function CartPage() {
                     <button
                       onClick={handleValidateCoupon}
                       disabled={couponLoading || !couponCode}
-                      className="bg-ink text-substrate text-xs font-bold px-4 py-2 rounded-md hover:bg-hazard hover:text-substrate transition-colors cursor-pointer"
+                      className="btn btn-primary btn-sm"
                     >
                       {couponLoading ? "..." : "Áp dụng"}
                     </button>
                   )}
                 </div>
                 {couponError && (
-                  <p className="text-xs text-hazard font-medium">{couponError}</p>
+                  <p className="text-xs text-hazard font-bold uppercase tracking-wider">{couponError}</p>
                 )}
                 {couponResult && (
-                  <p className="text-xs text-emerald-600 font-semibold">
-                    Áp dụng mã giảm giá thành công.
+                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider">
+                    Áp dụng thành công
                   </p>
                 )}
               </div>
@@ -293,18 +293,14 @@ export default function CartPage() {
               <button
                 onClick={handleProceedToCheckout}
                 disabled={selectedItemIds.length === 0}
-                className={`w-full text-xs font-bold uppercase py-4 rounded-md transition-colors flex items-center justify-center gap-1.5 ${
-                  selectedItemIds.length > 0
-                    ? "bg-ink text-substrate hover:bg-hazard cursor-pointer"
-                    : "bg-gray-100 text-ink/30 cursor-not-allowed"
-                }`}
+                className="btn btn-primary w-full btn-lg"
               >
-                <span>Tiến hành thanh toán</span>
+                <span>Thanh toán ngay</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               {!user && (
-                <p className="text-[11px] text-ink/40 text-center font-medium">
-                  * Yêu cầu đăng nhập tài khoản để thanh toán.
+                <p className="text-[10px] text-ink/40 text-center font-bold uppercase tracking-wider">
+                  * Yêu cầu đăng nhập để thanh toán.
                 </p>
               )}
             </div>
